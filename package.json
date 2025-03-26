@@ -3,7 +3,7 @@
 	"displayName": "Kilo Code",
 	"description": "A whole dev team of AI agents in your editor.",
 	"publisher": "kilocode",
-	"version": "4.6.0",
+	"version": "4.7.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -52,6 +52,58 @@
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
+		"walkthroughs": [
+			{
+				"id": "kiloCodeWalkthrough",
+				"title": "5 things Kilo Code can do for you",
+				"description": "You now have a personal AI code assistant that can do the following:",
+				"steps": [
+					{
+						"id": "welcome",
+						"title": "Create code for you",
+						"description": "Example: Ask it to create a Hacker News clone in any language. Watch it generate the code, create the files and run the final version for you.",
+						"media": {
+							"markdown": "walkthrough/step1.md"
+						}
+					},
+					{
+						"id": "getting-started",
+						"title": "Understand your codebase",
+						"description": "Confused about how a feature works? Just activate 'Ask mode' and ask any questions about your existing files.",
+						"media": {
+							"markdown": "walkthrough/step2.md"
+						},
+						"content": {
+							"path": "walkthrough/step2.md"
+						}
+					},
+					{
+						"id": "modes",
+						"title": "Debug code for you",
+						"description": "Kilo Code can automatically analyze your file and make it runnable again.",
+						"media": {
+							"markdown": "walkthrough/step3.md"
+						}
+					},
+					{
+						"id": "code-actions",
+						"title": "Plan your logic before jumping into code",
+						"description": "Kilo Code can be as your software architect, guiding you through a clear structure.",
+						"media": {
+							"markdown": "walkthrough/step4.md"
+						}
+					},
+					{
+						"id": "advanced-features",
+						"title": "...and much more",
+						"description": "Here's a bunch of other cool stuff you can do with Kilo code:",
+						"media": {
+							"markdown": "walkthrough/step5.md"
+						}
+					}
+				]
+			}
+		],
 		"submenus": [
 			{
 				"id": "kilo-code.contextMenu",
@@ -222,39 +274,19 @@
 			],
 			"view/title": [
 				{
-					"command": "kilo-code.plusButtonClicked",
-					"group": "navigation@1",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
-					"command": "kilo-code.promptsButtonClicked",
-					"group": "navigation@2",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
-					"command": "kilo-code.mcpButtonClicked",
-					"group": "navigation@3",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
-					"command": "kilo-code.historyButtonClicked",
+					"command": "kilo-code.popoutButtonClicked",
 					"group": "navigation@4",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
-					"command": "kilo-code.popoutButtonClicked",
-					"group": "navigation@5",
-					"when": "view == kilo-code.SidebarProvider"
-				},
-				{
 					"command": "kilo-code.settingsButtonClicked",
-					"group": "navigation@6",
+					"group": "navigation@1",
 					"when": "view == kilo-code.SidebarProvider"
 				},
 				{
 					"command": "kilo-code.helpButtonClicked",
-					"group": "navigation@7",
-					"when": "view == kilo-code.SidebarProvider"
+					"group": "navigation@6",
+					"when": "false && view == kilo-code.SidebarProvider"
 				}
 			]
 		},
