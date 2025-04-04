@@ -1228,7 +1228,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 						await this.context.globalState.update("allowedCommands", message.commands)
 						// Also update workspace settings
 						await vscode.workspace
-							.getConfiguration("kiloCode")
+							.getConfiguration("kilo-code")
 							.update("allowedCommands", message.commands, vscode.ConfigurationTarget.Global)
 						break
 					case "openMcpSettings": {
@@ -1793,7 +1793,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 								vscode.Uri.parse("https://github.com/Kilo-Org/kilocode/discussions"),
 							)
 						} else if (answer === discordText) {
-							await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/fxrhCFGhkP"))
+							await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/Ja6BkfyTzJ"))
 						}
 						break
 					}
