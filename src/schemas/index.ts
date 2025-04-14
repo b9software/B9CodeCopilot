@@ -397,7 +397,7 @@ export const providerSettingsSchema = z.object({
 	fakeAi: z.unknown().optional(),
 	// kilocode_change
 	kilocodeToken: z.string().optional(),
-	kilocodeModel: z.enum(["claude37", "gemini25"]).optional(),
+	kilocodeModel: z.enum(["claude37", "gemini25", "gpt41"]).optional(),
 	fireworksModelId: z.string().optional(),
 	fireworksApiKey: z.string().optional(),
 })
@@ -526,6 +526,7 @@ export const globalSettingsSchema = z.object({
 
 	browserToolEnabled: z.boolean().optional(),
 	browserViewportSize: z.string().optional(),
+	showAutoApproveMenu: z.boolean().optional(), // kilocode_change
 	screenshotQuality: z.number().optional(),
 	remoteBrowserEnabled: z.boolean().optional(),
 	remoteBrowserHost: z.string().optional(),
@@ -597,6 +598,7 @@ const globalSettingsRecord: GlobalSettingsRecord = {
 
 	browserToolEnabled: undefined,
 	browserViewportSize: undefined,
+	showAutoApproveMenu: undefined, // kilocode_change
 	screenshotQuality: undefined,
 	remoteBrowserEnabled: undefined,
 	remoteBrowserHost: undefined,

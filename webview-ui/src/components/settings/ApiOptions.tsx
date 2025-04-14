@@ -39,6 +39,7 @@ import {
 	fireworksModels,
 	ApiProvider,
 } from "../../../../src/shared/api"
+import { kilocodeOpenrouterModels } from "../../../../src/shared/kilocode/api" // kilocode_change
 import { ExtensionMessage } from "../../../../src/shared/ExtensionMessage"
 
 import { vscode } from "@/utils/vscode"
@@ -287,6 +288,7 @@ const ApiOptions = ({
 	const kilocodeDescriptions = {
 		claude37: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
 		gemini25: "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks.",
+		gpt41: "GPT-4.1 is OpenAI's most capable model for reasoning, coding, and multimodal tasks.",
 	}
 	// kilocode_change end
 
@@ -341,7 +343,7 @@ const ApiOptions = ({
 						<Select
 							value={apiConfiguration?.kilocodeModel || "claude37"}
 							onValueChange={(value) =>
-								setApiConfigurationField("kilocodeModel", value as "claude37" | "gemini25")
+								setApiConfigurationField("kilocodeModel", value as "claude37" | "gemini25" | "gpt41")
 							}>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select provider" />
@@ -349,6 +351,7 @@ const ApiOptions = ({
 							<SelectContent>
 								<SelectItem value="claude37">Claude 3.7 Sonnet</SelectItem>
 								<SelectItem value="gemini25">Gemini 2.5 Pro</SelectItem>
+								<SelectItem value="gpt41">GPT 4.1</SelectItem>
 							</SelectContent>
 						</Select>
 						<div className="text-sm text-vscode-descriptionForeground mt-1">
@@ -1876,6 +1879,26 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 			}
 		case "fireworks":
 			return getProviderData(fireworksModels, fireworksDefaultModelId)
+		// begin kilocode_change
+		case "kilocode":
+			// TODO: in line with kilocode-openrouter provider use hardcoded for now but info needs to be fetched later
+			const displayModelId = {
+				gemini25: "Gemini 2.5 Pro",
+				claude37: "Claude 3.7 Sonnet",
+				gpt41: "GPT 4.1",
+			}
+
+			const displayConfigs = {
+				gemini25: kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"],
+				claude37: anthropicModels["claude-3-7-sonnet-20250219"],
+				gpt41: kilocodeOpenrouterModels["openai/gpt-4.1"],
+			}
+			return {
+				selectedProvider: provider,
+				selectedModelId: displayModelId[apiConfiguration?.kilocodeModel ?? "claude37"],
+				selectedModelInfo: displayConfigs[apiConfiguration?.kilocodeModel ?? "claude37"],
+			}
+		// end kilocode_change
 		default:
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 	}

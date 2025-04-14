@@ -184,7 +184,7 @@ type ProviderSettings = {
 	rateLimitSeconds?: number | undefined
 	fakeAi?: unknown | undefined
 	kilocodeToken?: string | undefined
-	kilocodeModel?: ("claude37" | "gemini25") | undefined
+	kilocodeModel?: ("claude37" | "gemini25" | "gpt41") | undefined
 	fireworksModelId?: string | undefined
 	fireworksApiKey?: string | undefined
 }
@@ -258,6 +258,7 @@ type GlobalSettings = {
 	allowedCommands?: string[] | undefined
 	browserToolEnabled?: boolean | undefined
 	browserViewportSize?: string | undefined
+	showAutoApproveMenu?: boolean | undefined
 	screenshotQuality?: number | undefined
 	remoteBrowserEnabled?: boolean | undefined
 	remoteBrowserHost?: string | undefined
