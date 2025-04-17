@@ -7,6 +7,7 @@ import { LanguageModelChatSelector } from "vscode"
 import { Checkbox } from "vscrui"
 import { VSCodeLink, VSCodeRadio, VSCodeRadioGroup, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { ExternalLinkIcon } from "@radix-ui/react-icons"
+import { getKiloCodeBackendAuthUrl } from "../kilocode/helpers" // kilocode_change
 
 import {
 	ApiConfiguration,
@@ -69,6 +70,7 @@ interface ApiOptionsProps {
 	fromWelcomeView?: boolean
 	errorMessage: string | undefined
 	setErrorMessage: React.Dispatch<React.SetStateAction<string | undefined>>
+	hideKiloCodeButton?: boolean // kilocode_change
 }
 
 const ApiOptions = ({
@@ -78,6 +80,7 @@ const ApiOptions = ({
 	fromWelcomeView,
 	errorMessage,
 	setErrorMessage,
+	hideKiloCodeButton = false,
 }: ApiOptionsProps) => {
 	const { t } = useAppTranslation()
 
@@ -296,6 +299,8 @@ const ApiOptions = ({
 		claude37: "Claude 3.7 Sonnet is Anthropic's most capable model for reasoning, coding, and multimodal tasks.",
 		gemini25: "Gemini 2.5 Pro is Google's most capable model for reasoning, coding, and multimodal tasks.",
 		gpt41: "GPT-4.1 is OpenAI's most capable model for reasoning, coding, and multimodal tasks.",
+		gemini25flashpreview:
+			"Gemini 2.5 Flash Preview is Google's most capable model for reasoning, coding, and multimodal tasks.",
 	}
 	// kilocode_change end
 
@@ -358,6 +363,7 @@ const ApiOptions = ({
 							<SelectContent>
 								<SelectItem value="claude37">Claude 3.7 Sonnet</SelectItem>
 								<SelectItem value="gemini25">Gemini 2.5 Pro</SelectItem>
+								<SelectItem value="gemini25flashpreview">Gemini 2.5 Flash Preview</SelectItem>
 								<SelectItem value="gpt41">GPT 4.1</SelectItem>
 							</SelectContent>
 						</Select>
@@ -366,29 +372,32 @@ const ApiOptions = ({
 						</div>
 					</div>
 
-					{apiConfiguration.kilocodeToken ? (
-						<div>
-							<Button
-								variant="secondary"
-								onClick={async () => {
-									setApiConfigurationField("kilocodeToken", "")
+					{/* kilocode_change start */}
+					{!hideKiloCodeButton &&
+						(apiConfiguration.kilocodeToken ? (
+							<div>
+								<Button
+									variant="secondary"
+									onClick={async () => {
+										setApiConfigurationField("kilocodeToken", "")
 
-									vscode.postMessage({
-										type: "upsertApiConfiguration",
-										apiConfiguration: {
-											...apiConfiguration,
-											kilocodeToken: "",
-										},
-									})
-								}}>
-								Log out from Kilo Code
-							</Button>
-						</div>
-					) : (
-						<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme)}>
-							Log in at Kilo Code
-						</VSCodeButtonLink>
-					)}
+										vscode.postMessage({
+											type: "upsertApiConfiguration",
+											apiConfiguration: {
+												...apiConfiguration,
+												kilocodeToken: "",
+											},
+										})
+									}}>
+									Log out from Kilo Code
+								</Button>
+							</div>
+						) : (
+							<VSCodeButtonLink variant="secondary" href={getKiloCodeBackendAuthUrl(uriScheme)}>
+								Log in at Kilo Code
+							</VSCodeButtonLink>
+						))}
+					{/* kilocode_change end */}
 				</>
 			)}
 
@@ -1791,10 +1800,6 @@ const ApiOptions = ({
 	)
 }
 
-export function getKiloCodeBackendAuthUrl(uriScheme?: string) {
-	return `https://kilocode.ai/auth/signin?source=${uriScheme || "vscode"}`
-}
-
 export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 	const provider = apiConfiguration?.apiProvider ?? "kilocode"
 	const modelId = apiConfiguration?.apiModelId
@@ -1902,12 +1907,14 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 			// TODO: in line with kilocode-openrouter provider use hardcoded for now but info needs to be fetched later
 			const displayModelId = {
 				gemini25: "Gemini 2.5 Pro",
+				gemini25flashpreview: "Gemini 2.5 Flash Preview",
 				claude37: "Claude 3.7 Sonnet",
 				gpt41: "GPT 4.1",
 			}
 
 			const displayConfigs = {
 				gemini25: kilocodeOpenrouterModels["google/gemini-2.5-pro-preview-03-25"],
+				gemini25flashpreview: kilocodeOpenrouterModels["google/gemini-2.5-flash-preview"],
 				claude37: anthropicModels["claude-3-7-sonnet-20250219"],
 				gpt41: kilocodeOpenrouterModels["openai/gpt-4.1"],
 			}
