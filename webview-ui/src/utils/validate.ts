@@ -1,8 +1,8 @@
 import i18next from "i18next"
 
-import { ApiConfiguration, isRouterName, RouterModels } from "@roo/shared/api"
+import { ProviderSettings, isRouterName, RouterModels } from "@roo/shared/api"
 
-export function validateApiConfiguration(apiConfiguration: ApiConfiguration): string | undefined {
+export function validateApiConfiguration(apiConfiguration: ProviderSettings): string | undefined {
 	switch (apiConfiguration.apiProvider) {
 		case "openrouter":
 			if (!apiConfiguration.openRouterApiKey) {
@@ -84,6 +84,13 @@ export function validateApiConfiguration(apiConfiguration: ApiConfiguration): st
 				return "You must provide a valid API key or choose a different provider."
 			}
 			break
+		// kilocode_change start
+		case "kilocode":
+			if (!apiConfiguration.kilocodeToken || !apiConfiguration.kilocodeModel) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
+		// kilocode_change end
 	}
 
 	return undefined
@@ -123,7 +130,7 @@ export function validateBedrockArn(arn: string, region?: string) {
 	return { isValid: true, arnRegion, errorMessage: undefined }
 }
 
-export function validateModelId(apiConfiguration: ApiConfiguration, routerModels?: RouterModels): string | undefined {
+export function validateModelId(apiConfiguration: ProviderSettings, routerModels?: RouterModels): string | undefined {
 	const provider = apiConfiguration.apiProvider ?? ""
 
 	if (!isRouterName(provider)) {
