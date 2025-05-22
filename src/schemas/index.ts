@@ -932,6 +932,7 @@ export const clineAsks = [
 	"browser_action_launch",
 	"use_mcp_server",
 	"payment_required_prompt", // kilocode_change: Added for the low credits dialog
+	"report_bug", // kilocode_change
 ] as const
 
 export const clineAskSchema = z.enum(clineAsks)
@@ -1036,6 +1037,8 @@ export const toolNames = [
 	"switch_mode",
 	"new_task",
 	"fetch_instructions",
+	"new_rule", // kilocode_change
+	"report_bug", // kilocode_change
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)
