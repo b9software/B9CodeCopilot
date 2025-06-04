@@ -1,8 +1,9 @@
-import type { AssertEqual, Equals, Keys, Values, ExperimentId } from "@roo-code/types"
+import type { AssertEqual, Equals, Keys, Values, ExperimentId, ProviderSettings } from "@roo-code/types"
 
 export const EXPERIMENT_IDS = {
+	AUTOCOMPLETE: "autocomplete",
 	POWER_STEERING: "powerSteering",
-	AUTO_CONDENSE_CONTEXT: "autoCondenseContext",
+	CONCURRENT_FILE_READS: "concurrentFileReads",
 } as const satisfies Record<string, ExperimentId>
 
 type _AssertExperimentIds = AssertEqual<Equals<ExperimentId, Values<typeof EXPERIMENT_IDS>>>
@@ -14,8 +15,9 @@ interface ExperimentConfig {
 }
 
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
+	AUTOCOMPLETE: { enabled: false }, // kilocode_change
 	POWER_STEERING: { enabled: false },
-	AUTO_CONDENSE_CONTEXT: { enabled: false }, // Keep this last, there is a slider below it in the UI
+	CONCURRENT_FILE_READS: { enabled: false },
 }
 
 export const experimentDefault = Object.fromEntries(
