@@ -1,12 +1,18 @@
 # kilo-code
 
-## 4.33.2
+## [v4.34.0]
+
+### Minor Changes
+
+- [#636](https://github.com/Kilo-Org/kilocode/pull/636) [`6193029`](https://github.com/Kilo-Org/kilocode/commit/6193029fb1d5e5ec09dd57acb9547179ff01c2b1) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.19.4
+
+## [v4.33.2]
 
 ### Patch Changes
 
 - [#628](https://github.com/Kilo-Org/kilocode/pull/628) [`3bfd49e`](https://github.com/Kilo-Org/kilocode/commit/3bfd49e495400d2be89f9754255a0af32db8f942) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add clarification about adding context and how to add files/images
 
-## 4.33.1
+## [v4.33.1]
 
 ### Patch Changes
 
