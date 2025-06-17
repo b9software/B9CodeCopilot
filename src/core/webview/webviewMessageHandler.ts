@@ -344,16 +344,24 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 				}
 			}
 
+			// kilocode_change start: openrouter auth, kilocode provider
+			const openRouterApiKey = apiConfiguration.openRouterApiKey || message?.values?.openRouterApiKey
+			const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || message?.values?.openRouterBaseUrl
+
 			const modelFetchPromises: Array<{ key: RouterName; options: GetModelsOptions }> = [
-				{ key: "openrouter", options: { provider: "openrouter" } },
+				{
+					key: "openrouter",
+					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
+				},
 				{ key: "requesty", options: { provider: "requesty", apiKey: apiConfiguration.requestyApiKey } },
 				{ key: "glama", options: { provider: "glama" } },
 				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
 				{
 					key: "kilocode-openrouter",
 					options: { provider: "kilocode-openrouter", kilocodeToken: apiConfiguration.kilocodeToken },
-				}, // kilocode_change
+				},
 			]
+			// kilocode_change end
 
 			const litellmApiKey = apiConfiguration.litellmApiKey || message?.values?.litellmApiKey
 			const litellmBaseUrl = apiConfiguration.litellmBaseUrl || message?.values?.litellmBaseUrl
@@ -840,37 +848,13 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			break
 		case "updateSupportPrompt":
 			try {
-				if (Object.keys(message?.values ?? {}).length === 0) {
-					return
-				}
-
-				const existingPrompts = getGlobalState("customSupportPrompts") ?? {}
-				const updatedPrompts = { ...existingPrompts, ...message.values }
-				await updateGlobalState("customSupportPrompts", updatedPrompts)
+				await updateGlobalState("customSupportPrompts", message.values || {})
 				await provider.postStateToWebview()
 			} catch (error) {
 				provider.log(
 					`Error update support prompt: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
 				)
 				vscode.window.showErrorMessage(t("common:errors.update_support_prompt"))
-			}
-			break
-		case "resetSupportPrompt":
-			try {
-				if (!message?.text) {
-					return
-				}
-
-				const existingPrompts = getGlobalState("customSupportPrompts") ?? {}
-				const updatedPrompts = { ...existingPrompts }
-				updatedPrompts[message.text] = undefined
-				await updateGlobalState("customSupportPrompts", updatedPrompts)
-				await provider.postStateToWebview()
-			} catch (error) {
-				provider.log(
-					`Error reset support prompt: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-				)
-				vscode.window.showErrorMessage(t("common:errors.reset_support_prompt"))
 			}
 			break
 		case "updatePrompt":
@@ -1054,6 +1038,12 @@ export const webviewMessageHandler = async (provider: ClineProvider, message: We
 			await updateGlobalState("enhancementApiConfigId", message.text)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start
+		case "commitMessageApiConfigId":
+			await updateGlobalState("commitMessageApiConfigId", message.text)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "condensingApiConfigId":
 			await updateGlobalState("condensingApiConfigId", message.text)
 			await provider.postStateToWebview()
