@@ -26,6 +26,7 @@ import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
 
 export interface ExtensionStateContextType extends ExtensionState {
 	historyPreviewCollapsed?: boolean // Add the new state property
+	showTaskTimeline?: boolean // kilocode_change
 	didHydrateState: boolean
 	showWelcome: boolean
 	theme: any
@@ -123,6 +124,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	terminalCompressProgressBar?: boolean
 	setTerminalCompressProgressBar: (value: boolean) => void
 	setHistoryPreviewCollapsed: (value: boolean) => void
+	setShowTaskTimeline: (value: boolean) => void // kilocode_change
 	autoCondenseContext: boolean
 	setAutoCondenseContext: (value: boolean) => void
 	autoCondenseContextPercent: number
@@ -200,11 +202,12 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		maxReadFileLine: -1, // Default max read file line limit
 		pinnedApiConfigs: {}, // Empty object for pinned API configs
 		terminalZshOhMy: false, // Default Oh My Zsh integration setting
-		maxConcurrentFileReads: 15, // Default concurrent file reads
+		maxConcurrentFileReads: 5, // Default concurrent file reads
 		terminalZshP10k: false, // Default Powerlevel10k integration setting
 		terminalZdotdir: false, // Default ZDOTDIR handling setting
 		terminalCompressProgressBar: true, // Default to compress progress bar output
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
+		showTaskTimeline: true, // kilocode_change
 		cloudUserInfo: null,
 		cloudIsAuthenticated: false,
 		sharingEnabled: false,
@@ -443,6 +446,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			}),
 		setHistoryPreviewCollapsed: (value) =>
 			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })),
+		setShowTaskTimeline: (value) => setState((prevState) => ({ ...prevState, showTaskTimeline: value })), // kilocode_change
 
 		setAutoCondenseContext: (value) => setState((prevState) => ({ ...prevState, autoCondenseContext: value })),
 		setAutoCondenseContextPercent: (value) =>
