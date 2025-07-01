@@ -43,6 +43,7 @@ import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
 import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
 import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
+import { editMessageHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
@@ -1160,6 +1161,10 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("showTaskTimeline", message.bool ?? false)
 			await provider.postStateToWebview()
 			break
+		case "allowVeryLargeReads":
+			await updateGlobalState("allowVeryLargeReads", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
 		// kilocode_change end
 		case "maxConcurrentFileReads":
 			const valueToSave = message.value // Capture the value intended for saving
@@ -1988,5 +1993,11 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start
+		case "editMessage": {
+			await editMessageHandler(provider, message)
+			break
+		}
+		// kilocode_change end
 	}
 }

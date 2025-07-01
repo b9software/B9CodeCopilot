@@ -1168,12 +1168,19 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 					uiMessagesFilePath,
 					apiConversationHistory,
 				}
+			} else {
+				vscode.window.showErrorMessage(
+					`Task file not found for task ID: ${id} (file ${apiConversationHistoryFilePath})`,
+				) //kilocode_change show extra debugging information to debug task not found issues
 			}
+		} else {
+			vscode.window.showErrorMessage(`Task with ID: ${id} not found in history.`) // kilocode_change show extra debugging information to debug task not found issues
 		}
 
 		// if we tried to get a task that doesn't exist, remove it from state
 		// FIXME: this seems to happen sometimes when the json file doesnt save to disk for some reason
-		await this.deleteTaskFromState(id)
+		// await this.deleteTaskFromState(id) // kilocode_change disable confusing behaviour
+		await this.setTaskFileNotFound(id) // kilocode_change
 		throw new Error("Task not found")
 	}
 
@@ -1445,6 +1452,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			sharingEnabled,
 			organizationAllowList,
 			maxConcurrentFileReads,
+			allowVeryLargeReads, // kilocode_change
 			condensingApiConfigId,
 			customCondensingPrompt,
 			codebaseIndexConfig,
@@ -1539,6 +1547,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? -1,
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
+			allowVeryLargeReads: allowVeryLargeReads ?? false, // kilocode_change
 			settingsImportedAt: this.settingsImportedAt,
 			terminalCompressProgressBar: terminalCompressProgressBar ?? true,
 			hasSystemPromptOverride,
@@ -1696,6 +1705,7 @@ export class ClineProvider extends EventEmitter<ClineProviderEvents> implements 
 			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
+			allowVeryLargeReads: stateValues.allowVeryLargeReads ?? false, // kilocode_change
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,
 			cloudIsAuthenticated,
@@ -2071,5 +2081,18 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			await this.deleteTaskWithId(id)
 		}
 	}
+
+	async setTaskFileNotFound(id: string) {
+		const history = this.getGlobalState("taskHistory") ?? []
+		const updatedHistory = history.map((item) => {
+			if (item.id === id) {
+				return { ...item, fileNotfound: true }
+			}
+			return item
+		})
+		await this.updateGlobalState("taskHistory", updatedHistory)
+		await this.postStateToWebview()
+	}
+
 	// kilocode_change end
 }
