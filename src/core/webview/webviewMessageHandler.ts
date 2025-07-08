@@ -131,6 +131,13 @@ export const webviewMessageHandler = async (
 					),
 				)
 
+			// If user already opted in to telemetry, enable telemetry service
+			provider.getStateToPostToWebview().then((state) => {
+				const { telemetrySetting } = state
+				const isOptedIn = telemetrySetting === "enabled"
+				TelemetryService.instance.updateTelemetryState(isOptedIn)
+			})
+
 			provider.isViewLaunched = true
 			break
 		case "newTask":
@@ -1217,6 +1224,10 @@ export const webviewMessageHandler = async (
 		// kilocode_change start
 		case "commitMessageApiConfigId":
 			await updateGlobalState("commitMessageApiConfigId", message.text)
+			await provider.postStateToWebview()
+			break
+		case "autocompleteApiConfigId":
+			await updateGlobalState("autocompleteApiConfigId", message.text)
 			await provider.postStateToWebview()
 			break
 		// kilocode_change end
