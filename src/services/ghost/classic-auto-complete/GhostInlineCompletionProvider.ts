@@ -1,13 +1,13 @@
 import * as vscode from "vscode"
-import { FillInAtCursorSuggestion, GhostSuggestionsState } from "./GhostSuggestions"
+import { FillInAtCursorSuggestion } from "./GhostSuggestions"
 import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { parseGhostResponse } from "./GhostStreamingParser"
 import { AutoTriggerStrategy } from "./AutoTriggerStrategy"
 import { GhostModel } from "../GhostModel"
 import { GhostContext } from "../GhostContext"
 import { ApiStreamChunk } from "../../../api/transform/stream"
-import { GhostGutterAnimation } from "../GhostGutterAnimation"
 import type { GhostServiceSettings } from "@roo-code/types"
+import { refuseUselessSuggestion } from "./uselessSuggestionFilter"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 
@@ -62,7 +62,7 @@ export function findMatchingSuggestion(
 }
 
 export interface LLMRetrievalResult {
-	suggestions: GhostSuggestionsState
+	suggestion: FillInAtCursorSuggestion
 	cost: number
 	inputTokens: number
 	outputTokens: number
@@ -77,20 +77,17 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
 	private ghostContext: GhostContext
-	private cursorAnimation: GhostGutterAnimation
 	private getSettings: () => GhostServiceSettings | null
 
 	constructor(
 		model: GhostModel,
 		costTrackingCallback: CostTrackingCallback,
 		ghostContext: GhostContext,
-		cursorAnimation: GhostGutterAnimation,
 		getSettings: () => GhostServiceSettings | null,
 	) {
 		this.model = model
 		this.costTrackingCallback = costTrackingCallback
 		this.ghostContext = ghostContext
-		this.cursorAnimation = cursorAnimation
 		this.getSettings = getSettings
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
 	}
@@ -134,9 +131,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		// Check cache before making API call (includes both successful and failed lookups)
 		const cachedResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 		if (cachedResult !== null) {
-			// Return empty result if we have a cached entry (either success or failure)
+			// Return cached result (either success with text or failure with empty string)
 			return {
-				suggestions: new GhostSuggestionsState(),
+				suggestion: { text: cachedResult, prefix, suffix },
 				cost: 0,
 				inputTokens: 0,
 				outputTokens: 0,
@@ -154,7 +151,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		if (this.isRequestCancelled) {
 			return {
-				suggestions: new GhostSuggestionsState(),
+				suggestion: { text: "", prefix, suffix },
 				cost: 0,
 				inputTokens: 0,
 				outputTokens: 0,
@@ -183,7 +180,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		if (this.isRequestCancelled) {
 			return {
-				suggestions: new GhostSuggestionsState(),
+				suggestion: { text: "", prefix, suffix },
 				cost: usageInfo.cost,
 				inputTokens: usageInfo.inputTokens,
 				outputTokens: usageInfo.outputTokens,
@@ -193,14 +190,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		// Parse the response using the standalone function
-		const finalParseResult = parseGhostResponse(response, prefix, suffix)
+		let fillInAtCursorSuggestion = parseGhostResponse(response, prefix, suffix)
 
-		if (finalParseResult.suggestions.getFillInAtCursor()) {
-			console.info("Final suggestion:", finalParseResult.suggestions.getFillInAtCursor())
+		// Check if the suggestion is useless and clear it if so
+		if (fillInAtCursorSuggestion.text && refuseUselessSuggestion(fillInAtCursorSuggestion.text, prefix, suffix)) {
+			fillInAtCursorSuggestion = { text: "", prefix, suffix }
+		} else if (fillInAtCursorSuggestion.text) {
+			console.info("Final suggestion:", fillInAtCursorSuggestion)
 		}
 
+		// Always return a FillInAtCursorSuggestion, even if text is empty
 		return {
-			suggestions: finalParseResult.suggestions,
+			suggestion: fillInAtCursorSuggestion,
 			cost: usageInfo.cost,
 			inputTokens: usageInfo.inputTokens,
 			outputTokens: usageInfo.outputTokens,
@@ -256,9 +257,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		// No cached suggestion available - invoke LLM
 		if (this.model && this.ghostContext) {
-			// Show cursor animation while generating
-			this.cursorAnimation.active()
-
 			const context: GhostSuggestionContext = {
 				document,
 				range: new vscode.Range(position, position),
@@ -267,9 +265,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			const fullContext = await this.ghostContext.generate(context)
 			try {
 				const result = await this.getFromLLM(fullContext, this.model)
-
-				// Hide cursor animation after generation
-				this.cursorAnimation.hide()
 
 				if (this.costTrackingCallback && result.cost > 0) {
 					this.costTrackingCallback(
@@ -281,23 +276,20 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 					)
 				}
 
-				const fillInAtCursor = result.suggestions.getFillInAtCursor()
+				// Always update suggestions, even if text is empty (for caching)
+				this.updateSuggestions(result.suggestion)
 
-				if (fillInAtCursor) {
-					this.updateSuggestions(fillInAtCursor)
+				if (result.suggestion.text) {
 					const item: vscode.InlineCompletionItem = {
-						insertText: fillInAtCursor.text,
+						insertText: result.suggestion.text,
 						range: new vscode.Range(position, position),
 					}
 					return [item]
 				} else {
-					// Store empty suggestion to prevent re-requesting
-					this.updateSuggestions({ text: "", prefix, suffix })
-
+					// Empty text means no suggestion to show
 					return []
 				}
 			} catch (error) {
-				this.cursorAnimation.hide()
 				console.error("Error getting inline completion from LLM:", error)
 				return []
 			}
