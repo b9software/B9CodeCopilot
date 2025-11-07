@@ -47,7 +47,7 @@ export class GhostServiceManager {
 
 		// Register Internal Components
 		this.documentStore = new GhostDocumentStore()
-		this.providerSettingsManager = new ProviderSettingsManager(context)
+		this.providerSettingsManager = cline.providerSettingsManager
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
 
@@ -87,16 +87,15 @@ export class GhostServiceManager {
 		return GhostServiceManager.instance
 	}
 
-	// Settings Management
-	private loadSettings() {
-		const state = ContextProxy.instance.getValues()
-		return state.ghostServiceSettings
-	}
-
-	private async saveSettings() {
-		if (!this.settings) {
-			return
+	public async load() {
+		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {
+			enableQuickInlineTaskKeybinding: true,
+			enableSmartInlineTaskKeybinding: true,
 		}
+		await this.model.reload(this.providerSettingsManager)
+		await this.updateGlobalContext()
+		this.updateStatusBar()
+		await this.updateInlineCompletionProviderRegistration()
 		const settingsWithModelInfo = {
 			...this.settings,
 			provider: this.getCurrentProviderName(),
@@ -106,18 +105,9 @@ export class GhostServiceManager {
 		await this.cline.postStateToWebview()
 	}
 
-	public async load() {
-		this.settings = this.loadSettings()
-		await this.model.reload(this.providerSettingsManager)
-		await this.updateGlobalContext()
-		this.updateStatusBar()
-		await this.updateInlineCompletionProviderRegistration()
-		await this.saveSettings()
-	}
-
 	private async updateInlineCompletionProviderRegistration() {
 		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
-		const useNewAutocomplete = this.settings?.useNewAutocomplete ?? false
+		const useNewAutocomplete = false // this.settings?.useNewAutocomplete ?? false
 
 		// First, dispose any existing registration
 		if (this.inlineCompletionProviderDisposable) {
@@ -151,24 +141,16 @@ export class GhostServiceManager {
 	}
 
 	public async disable() {
-		this.settings = {
-			...this.settings,
-			enableAutoTrigger: false,
-			enableSmartInlineTaskKeybinding: false,
-			enableQuickInlineTaskKeybinding: false,
-		}
-		await this.saveSettings()
-		await this.load()
-	}
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				enableAutoTrigger: false,
+				enableSmartInlineTaskKeybinding: false,
+				enableQuickInlineTaskKeybinding: false,
+			},
+		})
 
-	public async enable() {
-		this.settings = {
-			...this.settings,
-			enableAutoTrigger: true,
-			enableSmartInlineTaskKeybinding: true,
-			enableQuickInlineTaskKeybinding: true,
-		}
-		await this.saveSettings()
 		await this.load()
 	}
 
