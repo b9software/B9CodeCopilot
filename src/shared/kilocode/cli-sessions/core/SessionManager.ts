@@ -45,7 +45,8 @@ export interface SessionManagerDependencies extends TrpcClientDependencies {
 
 export class SessionManager {
 	static readonly SYNC_INTERVAL = 3000
-	static readonly MAX_PATCH_SIZE_BYTES = 1024 * 1024
+	static readonly MAX_PATCH_SIZE_BYTES = 5 * 1024 * 1024
+	static readonly VERSION = 1
 
 	private static instance = new SessionManager()
 
@@ -62,6 +63,7 @@ export class SessionManager {
 	private taskGitHashes: Record<string, string> = {}
 	private sessionTitles: Record<string, string> = {}
 	private sessionUpdatedAt: Record<string, string> = {}
+	private tokenValid: Record<string, boolean | undefined> = {}
 
 	public get sessionId() {
 		return this.lastActiveSessionId || this.sessionPersistenceManager?.getLastSession()?.sessionId
@@ -80,6 +82,7 @@ export class SessionManager {
 	private onSessionRestored: (() => void) | undefined
 	private onSessionSynced: ((message: SessionSyncedMessage) => void) | undefined
 	private platform: string | undefined
+	private getToken: (() => Promise<string>) | undefined
 
 	private constructor() {}
 
@@ -91,6 +94,7 @@ export class SessionManager {
 		this.onSessionRestored = dependencies.onSessionRestored ?? (() => {})
 		this.onSessionSynced = dependencies.onSessionSynced ?? (() => {})
 		this.platform = dependencies.platform
+		this.getToken = dependencies.getToken
 
 		const trpcClient = new TrpcClient({
 			getToken: dependencies.getToken,
@@ -204,6 +208,16 @@ export class SessionManager {
 				throw new Error("Failed to obtain session")
 			}
 
+			if (session.version !== SessionManager.VERSION) {
+				this.logger?.warn("Session version mismatch", "SessionManager", {
+					sessionId,
+					expectedVersion: SessionManager.VERSION,
+					actualVersion: session.version,
+				})
+			}
+
+			this.logger?.debug("Obtained session", "SessionManager", { sessionId, session })
+
 			const sessionDirectoryPath = path.join(this.pathProvider.getTasksDir(), sessionId)
 
 			mkdirSync(sessionDirectoryPath, { recursive: true })
@@ -286,6 +300,7 @@ export class SessionManager {
 			}
 
 			this.sessionPersistenceManager.setSessionForTask(historyItem.id, sessionId)
+			this.lastActiveSessionId = sessionId
 
 			await this.extensionMessenger.sendWebviewMessage({
 				type: "addTaskToHistory",
@@ -403,6 +418,7 @@ export class SessionManager {
 				const session = await this.sessionClient.create({
 					title,
 					created_on_platform: this.platform,
+					version: SessionManager.VERSION,
 				})
 
 				sessionId = session.session_id
@@ -453,6 +469,28 @@ export class SessionManager {
 		try {
 			this.isSyncing = true
 
+			const token = await this.getToken?.()
+
+			if (!token) {
+				this.logger?.debug("No token available for session sync, skipping", "SessionManager")
+				return
+			}
+
+			if (this.tokenValid[token] === undefined) {
+				this.logger?.debug("Checking token validity", "SessionManager")
+
+				const tokenValid = await this.sessionClient.tokenValid()
+
+				this.tokenValid[token] = tokenValid
+
+				this.logger?.debug("Token validity checked", "SessionManager", { tokenValid })
+			}
+
+			if (!this.tokenValid[token]) {
+				this.logger?.debug("Token is invalid, skipping sync", "SessionManager")
+				return
+			}
+
 			const taskIds = new Set<string>(this.queue.map((item) => item.taskId))
 			const lastItem = this.queue[this.queue.length - 1]
 
@@ -480,10 +518,7 @@ export class SessionManager {
 						itemCount: taskItems.length,
 					})
 
-					const basePayload: Omit<
-						Parameters<NonNullable<typeof this.sessionClient>["create"]>[0],
-						"created_on_platform"
-					> = {}
+					const basePayload: Partial<Parameters<NonNullable<typeof this.sessionClient>["create"]>[0]> = {}
 
 					if (gitInfo?.repoUrl) {
 						basePayload.git_url = gitInfo.repoUrl
@@ -517,6 +552,7 @@ export class SessionManager {
 						const createdSession = await this.sessionClient.create({
 							...basePayload,
 							created_on_platform: this.platform,
+							version: SessionManager.VERSION,
 						})
 
 						sessionId = createdSession.session_id
@@ -724,6 +760,12 @@ export class SessionManager {
 						taskId,
 						error: error instanceof Error ? error.message : String(error),
 					})
+
+					const token = await this.getToken?.()
+
+					if (token) {
+						this.tokenValid[token] = undefined
+					}
 				}
 			}
 

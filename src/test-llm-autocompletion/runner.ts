@@ -2,9 +2,14 @@
 
 import fs from "fs"
 import path from "path"
+import { fileURLToPath } from "url"
 import { GhostProviderTester } from "./ghost-provider-tester.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
 import { checkApproval } from "./approvals.js"
+import { generateHtmlReport } from "./html-report.js"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 interface TestResult {
 	testCase: TestCase
@@ -18,28 +23,44 @@ interface TestResult {
 }
 
 export class TestRunner {
-	private tester: GhostProviderTester
 	private verbose: boolean
 	private results: TestResult[] = []
 	private skipApproval: boolean
 	private useOpusApproval: boolean
+	private originalConsoleLog: typeof console.log
+	private originalConsoleInfo: typeof console.info
 
 	constructor(verbose: boolean = false, skipApproval: boolean = false, useOpusApproval: boolean = false) {
 		this.verbose = verbose
 		this.skipApproval = skipApproval
 		this.useOpusApproval = useOpusApproval
-		this.tester = new GhostProviderTester()
+		this.originalConsoleLog = console.log
+		this.originalConsoleInfo = console.info
 	}
 
-	async runTest(testCase: TestCase): Promise<TestResult> {
+	private suppressConsole(): void {
+		if (!this.verbose) {
+			console.log = () => {}
+			console.info = () => {}
+		}
+	}
+
+	private restoreConsole(): void {
+		console.log = this.originalConsoleLog
+		console.info = this.originalConsoleInfo
+	}
+
+	async runTest(testCase: TestCase, tester: GhostProviderTester): Promise<TestResult> {
 		try {
+			this.suppressConsole()
 			const startTime = performance.now()
-			const { prefix, completion, suffix } = await this.tester.getCompletion(
+			const { prefix, completion, suffix } = await tester.getCompletion(
 				testCase.input,
 				testCase.name,
 				testCase.contextFiles,
 			)
 			const llmRequestDuration = performance.now() - startTime
+			this.restoreConsole()
 			let actualValue: string = prefix + completion + suffix
 
 			if (completion === "") {
@@ -77,6 +98,7 @@ export class TestRunner {
 				llmRequestDuration,
 			}
 		} catch (error) {
+			this.restoreConsole()
 			return {
 				testCase,
 				isApproved: false,
@@ -91,8 +113,9 @@ export class TestRunner {
 	}
 
 	async runAllTests(numRuns: number = 1): Promise<void> {
+		const tester = new GhostProviderTester()
 		const model = process.env.LLM_MODEL || "mistralai/codestral-2508"
-		const strategyName = this.tester.getName()
+		const strategyName = tester.getName()
 
 		console.log("\n🚀 Starting LLM Autocompletion Tests\n")
 		console.log("Provider: kilocode")
@@ -126,7 +149,7 @@ export class TestRunner {
 
 				const runResults: TestResult[] = []
 				for (let run = 0; run < numRuns; run++) {
-					const result = await this.runTest(testCase)
+					const result = await this.runTest(testCase, tester)
 					result.strategyName = strategyName
 					runResults.push(result)
 					this.results.push(result)
@@ -156,7 +179,7 @@ export class TestRunner {
 						console.log("✗ FAILED")
 						if (result.error) {
 							console.log(`    Error: ${result.error}`)
-						} else {
+						} else if (this.verbose) {
 							console.log(`    Input:`)
 							console.log("    " + "─".repeat(76))
 							console.log(
@@ -176,7 +199,7 @@ export class TestRunner {
 							)
 							console.log("    " + "─".repeat(76))
 
-							if (this.verbose && result.completion) {
+							if (result.completion) {
 								console.log("    Full LLM Response:")
 								console.log(
 									result.completion
@@ -205,7 +228,7 @@ export class TestRunner {
 			}
 		}
 
-		this.tester.dispose()
+		tester.dispose()
 		this.printSummary()
 	}
 
@@ -271,17 +294,6 @@ export class TestRunner {
 			}
 		}
 
-		// Failed tests details
-		if (failed > 0) {
-			console.log("\n❌ Failed Tests:")
-			for (const result of failedResults) {
-				console.log(`  • ${result.testCase.name} (${result.testCase.category})`)
-				if (result.error) {
-					console.log(`    Error: ${result.error}`)
-				}
-			}
-		}
-
 		// Unknown tests details
 		if (unknown > 0) {
 			console.log("\n❓ Unknown Tests (new outputs without approval):")
@@ -297,11 +309,13 @@ export class TestRunner {
 	}
 
 	async runSingleTest(testName: string, numRuns: number = 10): Promise<void> {
+		const tester = new GhostProviderTester()
 		const testCase = testCases.find((tc) => tc.name === testName)
 		if (!testCase) {
 			console.error(`Test "${testName}" not found`)
 			console.log("\nAvailable tests:")
 			testCases.forEach((tc) => console.log(`  - ${tc.name}`))
+			tester.dispose()
 			process.exit(1)
 		}
 
@@ -317,7 +331,7 @@ export class TestRunner {
 		for (let i = 0; i < numRuns; i++) {
 			console.log(`\n🔄 Run ${i + 1}/${numRuns}...`)
 
-			const result = await this.runTest(testCase)
+			const result = await this.runTest(testCase, tester)
 
 			results.push(result)
 
@@ -369,7 +383,7 @@ export class TestRunner {
 			}
 		}
 
-		if (lastResult.completion) {
+		if (this.verbose && lastResult.completion) {
 			console.log("\nCompletion:")
 			console.log("  " + "─".repeat(78))
 			console.log(
@@ -383,7 +397,7 @@ export class TestRunner {
 
 		console.log("\n" + "═".repeat(80) + "\n")
 
-		this.tester.dispose()
+		tester.dispose()
 		process.exit(passedRuns === numRuns ? 0 : 1)
 	}
 
@@ -460,11 +474,17 @@ async function main() {
 		}
 	}
 
-	const command = args.find((arg) => !arg.startsWith("-") && args.indexOf(arg) !== runsIndex + 1)
-
-	const runner = new TestRunner(verbose, skipApproval, useOpusApproval)
+	const command = args.find((arg, index) => !arg.startsWith("-") && (runsIndex === -1 || index !== runsIndex + 1))
 
 	try {
+		if (command === "report") {
+			await generateHtmlReport()
+			return
+		}
+
+		// Only create TestRunner for commands that need it
+		const runner = new TestRunner(verbose, skipApproval, useOpusApproval)
+
 		if (command === "clean") {
 			await runner.cleanApprovals()
 		} else if (command) {
@@ -495,5 +515,10 @@ function checkEnvironment() {
 	}
 }
 
-checkEnvironment()
+// Check if running a command that doesn't need API keys
+const argsForCheck = process.argv.slice(2)
+const commandForCheck = argsForCheck.find((arg) => !arg.startsWith("-"))
+if (commandForCheck !== "report" && commandForCheck !== "clean") {
+	checkEnvironment()
+}
 main().catch(console.error)
