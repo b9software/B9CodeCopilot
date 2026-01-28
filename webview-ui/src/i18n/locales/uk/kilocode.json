@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Додати кредит",
-		"lowBalance": "Твій баланс Kilo Code низький"
+		"lowBalance": "Твій баланс Kilo Code низький",
+		"switchToFreeModel": "Перейти на безкоштовну модель"
 	},
 	"pagination": {
 		"previous": "Попередня",
@@ -58,6 +59,7 @@
 			"apiKey": "Kilo Code API Key",
 			"login": "Увійти в Kilo Code",
 			"logout": "Вийти з Kilo Code",
+			"loginForPremiumModels": "Увійдіть, щоб отримати доступ до преміум моделей та функцій",
 			"providerRouting": {
 				"title": "Маршрутизація провайдерів",
 				"managedByOrganization": "Керувати маршрутизацією провайдерів на рівні організації",

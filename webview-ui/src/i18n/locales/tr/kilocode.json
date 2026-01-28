@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Kredi Ekle",
-		"lowBalance": "Kilo Code bakiyeniz düşük"
+		"lowBalance": "Kilo Code bakiyen düşük",
+		"switchToFreeModel": "Ücretsiz modele geç"
 	},
 	"pagination": {
 		"previous": "Önceki",
@@ -51,6 +52,7 @@
 			"apiKey": "Kilo Code API Anahtarı",
 			"login": "Kilo Code'a giriş yap",
 			"logout": "Kilo Code'dan çıkış yap",
+			"loginForPremiumModels": "Premium modellere ve özelliklere erişmek için giriş yap",
 			"providerRouting": {
 				"title": "Sağlayıcı Yönlendirme",
 				"managedByOrganization": "Organizasyon düzeyinde Sağlayıcı Yönlendirmeyi yönet",

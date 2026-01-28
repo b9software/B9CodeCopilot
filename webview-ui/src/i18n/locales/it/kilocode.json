@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Aggiungi credito",
-		"lowBalance": "Il tuo saldo Kilo Code è basso"
+		"lowBalance": "Il tuo saldo Kilo Code è basso",
+		"switchToFreeModel": "Passa a un modello gratuito"
 	},
 	"pagination": {
 		"previous": "Precedente",
@@ -46,6 +47,7 @@
 			"apiKey": "Chiave API Kilo Code",
 			"login": "Accedi a Kilo Code",
 			"logout": "Disconnetti da Kilo Code",
+			"loginForPremiumModels": "Accedi per sbloccare modelli e funzionalità premium",
 			"providerRouting": {
 				"title": "Routing dei provider",
 				"managedByOrganization": "Gestisci routing dei provider a livello di organizzazione",

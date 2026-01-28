@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "增加額度",
-		"lowBalance": "你的 Kilo Code 餘額不足"
+		"lowBalance": "你的 Kilo Code 餘額不足",
+		"switchToFreeModel": "切換到免費模型"
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} 的測試期已結束！請切換到其他模型繼續使用。",
@@ -54,6 +55,7 @@
 			"apiKey": "Kilo Code API 金鑰",
 			"login": "登入 Kilo Code",
 			"logout": "登出 Kilo Code",
+			"loginForPremiumModels": "登入以存取進階模型和功能",
 			"providerRouting": {
 				"title": "供應商路由",
 				"managedByOrganization": "管理組織層級供應商路由",

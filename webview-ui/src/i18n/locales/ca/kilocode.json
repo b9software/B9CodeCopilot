@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Afegir crèdit",
-		"lowBalance": "El teu saldo de Kilo Code és baix"
+		"lowBalance": "El teu saldo de Kilo Code és baix",
+		"switchToFreeModel": "Canvia a un model gratuït"
 	},
 	"pagination": {
 		"previous": "Anterior",
@@ -39,6 +40,7 @@
 			"apiKey": "Clau API de Kilo Code",
 			"login": "Iniciar sessió a Kilo Code",
 			"logout": "Tancar sessió de Kilo Code",
+			"loginForPremiumModels": "Inicia sessió per accedir a models i funcions premium",
 			"providerRouting": {
 				"title": "Encaminament de proveïdors",
 				"managedByOrganization": "Gestionar encaminament de proveïdors a nivell d'organització",
