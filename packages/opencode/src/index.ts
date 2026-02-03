@@ -6,10 +6,11 @@ import { Log } from "./util/log"
 import { AuthCommand } from "./cli/cmd/auth"
 import { AgentCommand } from "./cli/cmd/agent"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
+import { UninstallCommand } from "./cli/cmd/uninstall"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
 import { Installation } from "./installation"
-import { NamedError } from "./util/error"
+import { NamedError } from "@opencode-ai/util/error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
 import { DebugCommand } from "./cli/cmd/debug"
@@ -17,11 +18,21 @@ import { StatsCommand } from "./cli/cmd/stats"
 import { McpCommand } from "./cli/cmd/mcp"
 import { GithubCommand } from "./cli/cmd/github"
 import { ExportCommand } from "./cli/cmd/export"
+import { ImportCommand } from "./cli/cmd/import"
 import { AttachCommand } from "./cli/cmd/tui/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui/thread"
-import { TuiSpawnCommand } from "./cli/cmd/tui/spawn"
 import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
+import { WebCommand } from "./cli/cmd/web"
+import { PrCommand } from "./cli/cmd/pr"
+import { SessionCommand } from "./cli/cmd/session"
+// kilocode_change start - Import telemetry and legacy migration
+import { Telemetry } from "@kilocode/kilo-telemetry"
+import { migrateLegacyKiloAuth } from "@kilocode/kilo-gateway"
+import { Global } from "./global"
+import { Config } from "./config/config"
+import { Auth } from "./auth"
+// kilocode_change end
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
@@ -36,7 +47,9 @@ process.on("uncaughtException", (e) => {
 })
 
 const cli = yargs(hideBin(process.argv))
-  .scriptName("opencode")
+  .parserConfiguration({ "populate--": true })
+  .scriptName("kilo") // kilocode_change
+  .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
   .version("version", "show version number", Installation.VERSION)
@@ -61,18 +74,43 @@ const cli = yargs(hideBin(process.argv))
       })(),
     })
 
-    process.env["OPENCODE"] = "1"
+    process.env.AGENT = "1"
+    process.env.OPENCODE = "1"
 
     Log.Default.info("opencode", {
       version: Installation.VERSION,
       args: process.argv.slice(2),
     })
+
+    // kilocode_change start - Initialize telemetry
+    const globalCfg = await Config.getGlobal()
+    await Telemetry.init({
+      dataPath: Global.Path.data,
+      version: Installation.VERSION,
+      enabled: globalCfg.experimental?.openTelemetry !== false,
+    })
+
+    // Migrate legacy Kilo CLI auth if needed
+    await migrateLegacyKiloAuth(
+      async () => (await Auth.get("kilo")) !== undefined,
+      async (auth) => Auth.set("kilo", auth),
+    )
+
+    const kiloAuth = await Auth.get("kilo")
+    if (kiloAuth) {
+      const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
+      const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined
+      await Telemetry.updateIdentity(token, accountId)
+    }
+
+    Telemetry.trackCliStart()
+    // kilocode_change end
   })
   .usage("\n" + UI.logo())
+  .completion("completion", "generate shell completion script")
   .command(AcpCommand)
   .command(McpCommand)
   .command(TuiThreadCommand)
-  .command(TuiSpawnCommand)
   .command(AttachCommand)
   .command(RunCommand)
   .command(GenerateCommand)
@@ -80,19 +118,26 @@ const cli = yargs(hideBin(process.argv))
   .command(AuthCommand)
   .command(AgentCommand)
   .command(UpgradeCommand)
+  .command(UninstallCommand)
   .command(ServeCommand)
+  .command(WebCommand)
   .command(ModelsCommand)
   .command(StatsCommand)
   .command(ExportCommand)
+  .command(ImportCommand)
   .command(GithubCommand)
-  .fail((msg) => {
+  .command(PrCommand)
+  .command(SessionCommand)
+  .fail((msg, err) => {
     if (
-      msg.startsWith("Unknown argument") ||
-      msg.startsWith("Not enough non-option arguments") ||
-      msg.startsWith("Invalid values:")
+      msg?.startsWith("Unknown argument") ||
+      msg?.startsWith("Not enough non-option arguments") ||
+      msg?.startsWith("Invalid values:")
     ) {
+      if (err) throw err
       cli.showHelp("log")
     }
+    if (err) throw err
     process.exit(1)
   })
   .strict()
@@ -133,10 +178,16 @@ try {
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {
     UI.error("Unexpected error, check log file at " + Log.file() + " for more details" + EOL)
-    console.error(e)
+    console.error(e instanceof Error ? e.message : String(e))
   }
   process.exitCode = 1
 } finally {
+  // kilocode_change start - Track CLI exit and shutdown telemetry
+  const exitCode = typeof process.exitCode === "number" ? process.exitCode : undefined
+  Telemetry.trackCliExit(exitCode)
+  await Telemetry.shutdown()
+  // kilocode_change end
+
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless
   // run using `docker run --init`.

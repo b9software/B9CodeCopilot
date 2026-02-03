@@ -1,79 +1,88 @@
 <p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
+  <a href="https://kilo.ai">
+    <img src="logo.png" alt="Kilo CLI logo">
   </a>
 </p>
-<p align="center">The AI coding agent built for the terminal.</p>
+<p align="center">The open source AI coding agent.</p>
 <p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/sst/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/sst/opencode/publish.yml?style=flat-square&branch=dev" /></a>
+  <a href="https://kilo.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
+  <a href="https://x.com/kilocode"><img alt="X" src="https://img.shields.io/badge/X-@kilocode-000000?style=flat-square&logo=x&logoColor=white" /></a>
+  <a href="https://www.reddit.com/r/kilocode/"><img alt="Reddit" src="https://img.shields.io/badge/Reddit-r%2Fkilocode-FF4500?style=flat-square&logo=reddit&logoColor=white" /></a>
 </p>
-
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
 
 ---
 
 ### Installation
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+# npm
+npm install -g @kilocode/cli
 
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-scoop bucket add extras; scoop install extras/opencode  # Windows
-choco install opencode             # Windows
-brew install sst/tap/opencode      # macOS and Linux
-paru -S opencode-bin               # Arch Linux
+# Or run directly with npx
+npx @kilocode/cli
 ```
 
-> [!TIP]
-> Remove versions older than 0.1.x before installing.
+Then run `kilo` in any project directory to start.
 
-#### Installation Directory
+### Agents
 
-The install script respects the following priority order for the installation path:
+Kilo CLI includes two built-in agents you can switch between using the `Tab` key:
 
-1. `$OPENCODE_INSTALL_DIR` - Custom installation directory
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification compliant path
-3. `$HOME/bin` - Standard user binary directory (if exists or can be created)
-4. `$HOME/.opencode/bin` - Default fallback
+- **build** - Default, full access agent for development work
+- **plan** - Read-only agent for analysis and code exploration
+  - Denies file edits by default
+  - Asks permission before running bash commands
+  - Ideal for exploring unfamiliar codebases or planning changes
+
+Also included is a **general** subagent for complex searches and multi-step tasks.
+This is used internally and can be invoked using `@general` in messages.
+
+### Autonomous Mode (CI/CD)
+
+Use the `--auto` flag with `kilo run` to enable fully autonomous operation without user interaction. This is ideal for CI/CD pipelines and automated workflows:
 
 ```bash
-# Examples
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+kilo run --auto "run tests and fix any failures"
 ```
+
+**Important:** The `--auto` flag disables all permission prompts and allows the agent to execute any action without confirmation. Only use this in trusted environments like CI/CD pipelines.
+
+### Migrating from Kilo Code Extension
+
+If you're coming from the Kilo Code VS Code extension, your configurations are automatically migrated:
+
+| Kilo Code Feature                            | Kilo CLI Equivalent                          |
+| -------------------------------------------- | -------------------------------------------- |
+| Custom modes                                 | Converted to agents                          |
+| Rules (`.kilocoderules`, `.kilocode/rules/`) | Added to `instructions` array                |
+| Skills (`.kilocode/skills/`)                 | Auto-discovered alongside `.opencode/skill/` |
+| Workflows (`.kilocode/workflows/`)           | Converted to commands                        |
+| MCP servers                                  | Migrated to `mcp` config                     |
+
+**Default mode mappings:**
+
+- `code` → `build` agent
+- `architect` → `plan` agent
+
+For detailed migration information, see:
+
+- [Migration Overview](packages/opencode/src/kilocode/docs/migration.md)
+- [Rules Migration](packages/opencode/src/kilocode/docs/rules-migration.md)
 
 ### Documentation
 
-For more info on how to configure OpenCode [**head over to our docs**](https://opencode.ai/docs).
+For more info on how to configure Kilo CLI, [**head over to our docs**](https://kilo.ai/docs).
 
 ### Contributing
 
-If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
+If you're interested in contributing, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
 
 ### FAQ
 
-#### How is this different than Claude Code?
+#### Where did Kilo CLI come from?
 
-It's very similar to Claude Code in terms of capability. Here are the key differences:
-
-- 100% open source
-- Not coupled to any provider. Although Anthropic is recommended, OpenCode can be used with OpenAI, Google or even local models. As models evolve the gaps between them will close and pricing will drop so being provider-agnostic is important.
-- Out of the box LSP support
-- A focus on TUI. OpenCode is built by neovim users and the creators of [terminal.shop](https://terminal.shop); we are going to push the limits of what's possible in the terminal.
-- A client/server architecture. This for example can allow OpenCode to run on your computer, while you can drive it remotely from a mobile app. Meaning that the TUI frontend is just one of the possible clients.
-
-#### What's the other repo?
-
-The other confusingly named repo has no relation to this one. You can [read the story behind it here](https://x.com/thdxr/status/1933561254481666466).
+Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode), enhanced to work within the Kilo agentic engineering platform.
 
 ---
 
-**Join our community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+**Join our community** [Discord](https://kilo.ai/discord) | [X.com](https://x.com/kilocode) | [Reddit](https://reddit.com/r/kilocode)

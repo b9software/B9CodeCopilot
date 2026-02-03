@@ -3,7 +3,7 @@ import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 import path from "path"
 import os from "os"
 
-const app = "opencode"
+const app = "kilo" // kilocode_change
 
 const data = path.join(xdgData!, app)
 const cache = path.join(xdgCache!, app)
@@ -12,14 +12,17 @@ const state = path.join(xdgState!, app)
 
 export namespace Global {
   export const Path = {
-    home: os.homedir(),
+    // Allow override via OPENCODE_TEST_HOME for test isolation
+    get home() {
+      return process.env.KILO_TEST_HOME || process.env.OPENCODE_TEST_HOME || os.homedir() // kilocode_change
+    },
     data,
     bin: path.join(data, "bin"),
     log: path.join(data, "log"),
     cache,
     config,
     state,
-  } as const
+  }
 }
 
 await Promise.all([
@@ -30,7 +33,7 @@ await Promise.all([
   fs.mkdir(Global.Path.bin, { recursive: true }),
 ])
 
-const CACHE_VERSION = "9"
+const CACHE_VERSION = "21"
 
 const version = await Bun.file(path.join(Global.Path.cache, "version"))
   .text()

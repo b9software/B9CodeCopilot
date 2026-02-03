@@ -1,22 +1,27 @@
+import { Slug } from "@opencode-ai/util/slug"
+import path from "path"
+import { BusEvent } from "@/bus/bus-event"
+import { Bus } from "@/bus"
 import { Decimal } from "decimal.js"
 import z from "zod"
 import { type LanguageModelUsage, type ProviderMetadata } from "ai"
-
-import { Bus } from "../bus"
 import { Config } from "../config/config"
 import { Flag } from "../flag/flag"
 import { Identifier } from "../id/id"
 import { Installation } from "../installation"
-import type { ModelsDev } from "../provider/models"
-import { Share } from "../share/share"
+
 import { Storage } from "../storage/storage"
 import { Log } from "../util/log"
 import { MessageV2 } from "./message-v2"
 import { Instance } from "../project/instance"
 import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
-import { Snapshot } from "@/snapshot"
 import { Command } from "../command"
+import { Snapshot } from "@/snapshot"
+
+import type { Provider } from "@/provider/provider"
+import { PermissionNext } from "@/permission/next"
+import { Global } from "@/global"
 
 export namespace Session {
   const log = Log.create({ service: "session" })
@@ -34,15 +39,29 @@ export namespace Session {
     ).test(title)
   }
 
+  function getForkedTitle(title: string): string {
+    const match = title.match(/^(.+) \(fork #(\d+)\)$/)
+    if (match) {
+      const base = match[1]
+      const num = parseInt(match[2], 10)
+      return `${base} (fork #${num + 1})`
+    }
+    return `${title} (fork #1)`
+  }
+
   export const Info = z
     .object({
       id: Identifier.schema("session"),
+      slug: z.string(),
       projectID: z.string(),
       directory: z.string(),
       parentID: Identifier.schema("session").optional(),
       summary: z
         .object({
-          diffs: Snapshot.FileDiff.array(),
+          additions: z.number(),
+          deletions: z.number(),
+          files: z.number(),
+          diffs: Snapshot.FileDiff.array().optional(),
         })
         .optional(),
       share: z
@@ -56,7 +75,9 @@ export namespace Session {
         created: z.number(),
         updated: z.number(),
         compacting: z.number().optional(),
+        archived: z.number().optional(),
       }),
+      permission: PermissionNext.Ruleset.optional(),
       revert: z
         .object({
           messageID: z.string(),
@@ -82,25 +103,32 @@ export namespace Session {
   export type ShareInfo = z.output<typeof ShareInfo>
 
   export const Event = {
-    Created: Bus.event(
+    Created: BusEvent.define(
       "session.created",
       z.object({
         info: Info,
       }),
     ),
-    Updated: Bus.event(
+    Updated: BusEvent.define(
       "session.updated",
       z.object({
         info: Info,
       }),
     ),
-    Deleted: Bus.event(
+    Deleted: BusEvent.define(
       "session.deleted",
       z.object({
         info: Info,
       }),
     ),
-    Error: Bus.event(
+    Diff: BusEvent.define(
+      "session.diff",
+      z.object({
+        sessionID: z.string(),
+        diff: Snapshot.FileDiff.array(),
+      }),
+    ),
+    Error: BusEvent.define(
       "session.error",
       z.object({
         sessionID: z.string().optional(),
@@ -114,6 +142,7 @@ export namespace Session {
       .object({
         parentID: Identifier.schema("session").optional(),
         title: z.string().optional(),
+        permission: Info.shape.permission,
       })
       .optional(),
     async (input) => {
@@ -121,6 +150,7 @@ export namespace Session {
         parentID: input?.parentID,
         directory: Instance.directory,
         title: input?.title,
+        permission: input?.permission,
       })
     },
   )
@@ -131,16 +161,27 @@ export namespace Session {
       messageID: Identifier.schema("message").optional(),
     }),
     async (input) => {
+      const original = await get(input.sessionID)
+      if (!original) throw new Error("session not found")
+      const title = getForkedTitle(original.title)
       const session = await createNext({
         directory: Instance.directory,
+        title,
       })
-      const msgs = await messages(input.sessionID)
+      const msgs = await messages({ sessionID: input.sessionID })
+      const idMap = new Map<string, string>()
+
       for (const msg of msgs) {
         if (input.messageID && msg.info.id >= input.messageID) break
+        const newID = Identifier.ascending("message")
+        idMap.set(msg.info.id, newID)
+
+        const parentID = msg.info.role === "assistant" && msg.info.parentID ? idMap.get(msg.info.parentID) : undefined
         const cloned = await updateMessage({
           ...msg.info,
           sessionID: session.id,
-          id: Identifier.ascending("message"),
+          id: newID,
+          ...(parentID && { parentID }),
         })
 
         for (const part of msg.parts) {
@@ -167,14 +208,17 @@ export namespace Session {
     title?: string
     parentID?: string
     directory: string
+    permission?: PermissionNext.Ruleset
   }) {
     const result: Info = {
       id: Identifier.descending("session", input.id),
+      slug: Slug.create(),
       version: Installation.VERSION,
       projectID: Instance.project.id,
       directory: input.directory,
       parentID: input.parentID,
       title: input.title ?? createDefaultTitle(!!input.parentID),
+      permission: input.permission,
       time: {
         created: Date.now(),
         updated: Date.now(),
@@ -202,6 +246,13 @@ export namespace Session {
     return result
   }
 
+  export function plan(input: { slug: string; time: { created: number } }) {
+    const base = Instance.project.vcs
+      ? path.join(Instance.worktree, ".opencode", "plans")
+      : path.join(Global.Path.data, "plans")
+    return path.join(base, [input.time.created, input.slug].join("-") + ".md")
+  }
+
   export const get = fn(Identifier.schema("session"), async (id) => {
     const read = await Storage.read<Info>(["session", Instance.project.id, id])
     return read as Info
@@ -216,41 +267,39 @@ export namespace Session {
     if (cfg.share === "disabled") {
       throw new Error("Sharing is disabled in configuration")
     }
-
-    const session = await get(id)
-    if (session.share) return session.share
-    const share = await Share.create(id)
-    await update(id, (draft) => {
-      draft.share = {
-        url: share.url,
-      }
-    })
-    await Storage.write(["share", id], share)
-    await Share.sync("session/info/" + id, session)
-    for (const msg of await messages(id)) {
-      await Share.sync("session/message/" + id + "/" + msg.info.id, msg.info)
-      for (const part of msg.parts) {
-        await Share.sync("session/part/" + id + "/" + msg.info.id + "/" + part.id, part)
-      }
-    }
+    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+    const share = await KiloSessions.share(id) // kilocode_change
+    await update(
+      id,
+      (draft) => {
+        draft.share = {
+          url: share.url,
+        }
+      },
+      { touch: false },
+    )
     return share
   })
 
   export const unshare = fn(Identifier.schema("session"), async (id) => {
-    const share = await getShare(id)
-    if (!share) return
-    await Storage.remove(["share", id])
-    await update(id, (draft) => {
-      draft.share = undefined
-    })
-    await Share.remove(id, share.secret)
+    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+    await KiloSessions.unshare(id) // kilocode_change
+    await update(
+      id,
+      (draft) => {
+        draft.share = undefined
+      },
+      { touch: false },
+    )
   })
 
-  export async function update(id: string, editor: (session: Info) => void) {
+  export async function update(id: string, editor: (session: Info) => void, options?: { touch?: boolean }) {
     const project = Instance.project
     const result = await Storage.update<Info>(["session", project.id, id], (draft) => {
       editor(draft)
-      draft.time.updated = Date.now()
+      if (options?.touch !== false) {
+        draft.time.updated = Date.now()
+      }
     })
     Bus.publish(Event.Updated, {
       info: result,
@@ -258,41 +307,26 @@ export namespace Session {
     return result
   }
 
-  export const messages = fn(Identifier.schema("session"), async (sessionID) => {
-    const result = [] as MessageV2.WithParts[]
-    for (const p of await Storage.list(["message", sessionID])) {
-      const read = await Storage.read<MessageV2.Info>(p)
-      result.push({
-        info: read,
-        parts: await getParts(read.id),
-      })
-    }
-    result.sort((a, b) => (a.info.id > b.info.id ? 1 : -1))
-    return result
+  export const diff = fn(Identifier.schema("session"), async (sessionID) => {
+    const diffs = await Storage.read<Snapshot.FileDiff[]>(["session_diff", sessionID])
+    return diffs ?? []
   })
 
-  export const getMessage = fn(
+  export const messages = fn(
     z.object({
       sessionID: Identifier.schema("session"),
-      messageID: Identifier.schema("message"),
+      limit: z.number().optional(),
     }),
     async (input) => {
-      return {
-        info: await Storage.read<MessageV2.Info>(["message", input.sessionID, input.messageID]),
-        parts: await getParts(input.messageID),
+      const result = [] as MessageV2.WithParts[]
+      for await (const msg of MessageV2.stream(input.sessionID)) {
+        if (input.limit && result.length >= input.limit) break
+        result.push(msg)
       }
+      result.reverse()
+      return result
     },
   )
-
-  export const getParts = fn(Identifier.schema("message"), async (messageID) => {
-    const result = [] as MessageV2.Part[]
-    for (const item of await Storage.list(["part", messageID])) {
-      const read = await Storage.read<MessageV2.Part>(item)
-      result.push(read)
-    }
-    result.sort((a, b) => (a.id > b.id ? 1 : -1))
-    return result
-  })
 
   export async function* list() {
     const project = Instance.project
@@ -319,7 +353,8 @@ export namespace Session {
       for (const child of await children(sessionID)) {
         await remove(child.id)
       }
-      await unshare(sessionID).catch(() => {})
+      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+      await KiloSessions.remove(sessionID).catch(() => {}) // kilocode_change
       for (const msg of await Storage.list(["message", sessionID])) {
         for (const part of await Storage.list(["part", msg.at(-1)!])) {
           await Storage.remove(part)
@@ -358,6 +393,23 @@ export namespace Session {
     },
   )
 
+  export const removePart = fn(
+    z.object({
+      sessionID: Identifier.schema("session"),
+      messageID: Identifier.schema("message"),
+      partID: Identifier.schema("part"),
+    }),
+    async (input) => {
+      await Storage.remove(["part", input.messageID, input.partID])
+      Bus.publish(MessageV2.Event.PartRemoved, {
+        sessionID: input.sessionID,
+        messageID: input.messageID,
+        partID: input.partID,
+      })
+      return input.partID
+    },
+  )
+
   const UpdatePartInput = z.union([
     MessageV2.Part,
     z.object({
@@ -383,32 +435,86 @@ export namespace Session {
 
   export const getUsage = fn(
     z.object({
-      model: z.custom<ModelsDev.Model>(),
+      model: z.custom<Provider.Model>(),
       usage: z.custom<LanguageModelUsage>(),
       metadata: z.custom<ProviderMetadata>().optional(),
+      provider: z.custom<Provider.Info>().optional(), // kilocode_change
     }),
     (input) => {
+      const cacheReadInputTokens = input.usage.cachedInputTokens ?? 0
+      const cacheWriteInputTokens = (input.metadata?.["anthropic"]?.["cacheCreationInputTokens"] ??
+        // @ts-expect-error
+        input.metadata?.["bedrock"]?.["usage"]?.["cacheWriteInputTokens"] ??
+        // @ts-expect-error
+        input.metadata?.["venice"]?.["usage"]?.["cacheCreationInputTokens"] ??
+        0) as number
+
+      const excludesCachedTokens = !!(input.metadata?.["anthropic"] || input.metadata?.["bedrock"])
+      const adjustedInputTokens = excludesCachedTokens
+        ? (input.usage.inputTokens ?? 0)
+        : (input.usage.inputTokens ?? 0) - cacheReadInputTokens - cacheWriteInputTokens
+      const safe = (value: number) => {
+        if (!Number.isFinite(value)) return 0
+        return value
+      }
+
       const tokens = {
-        input: input.usage.inputTokens ?? 0,
-        output: input.usage.outputTokens ?? 0,
-        reasoning: input.usage?.reasoningTokens ?? 0,
+        input: safe(adjustedInputTokens),
+        output: safe(input.usage.outputTokens ?? 0),
+        reasoning: safe(input.usage?.reasoningTokens ?? 0),
         cache: {
-          write: (input.metadata?.["anthropic"]?.["cacheCreationInputTokens"] ??
-            // @ts-expect-error
-            input.metadata?.["bedrock"]?.["usage"]?.["cacheWriteInputTokens"] ??
-            0) as number,
-          read: input.usage.cachedInputTokens ?? 0,
+          write: safe(cacheWriteInputTokens),
+          read: safe(cacheReadInputTokens),
         },
       }
+
+      // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
+      // The OpenRouter AI SDK provider exposes cost at providerMetadata.openrouter.usage
+      // Reference: https://openrouter.ai/docs/use-cases/usage-accounting
+      // Note: The AI SDK uses camelCase (upstreamInferenceCost), not snake_case
+      const openrouterUsage = input.metadata?.["openrouter"]?.["usage"] as
+        | {
+            cost?: number
+            costDetails?: { upstreamInferenceCost?: number }
+          }
+        | undefined
+
+      if (openrouterUsage) {
+        // For Kilo provider (BYOK), always prefer upstreamInferenceCost when available
+        // The 'cost' field from OpenRouter is just their 5% fee for BYOK requests
+        // For regular OpenRouter, use the cost field
+        const isKiloProvider = (input.provider?.id ?? input.model.providerID) === "kilo"
+        const upstreamCost = openrouterUsage.costDetails?.upstreamInferenceCost
+        const openrouterCost = openrouterUsage.cost
+
+        // Kilo is always BYOK, so prefer upstream cost. For OpenRouter, use regular cost.
+        const providerCost = isKiloProvider && upstreamCost !== undefined ? upstreamCost : openrouterCost
+
+        if (providerCost !== undefined && providerCost !== null && Number.isFinite(providerCost)) {
+          return {
+            cost: safe(providerCost),
+            tokens,
+          }
+        }
+      }
+      // kilocode_change end
+
+      const costInfo =
+        input.model.cost?.experimentalOver200K && tokens.input + tokens.cache.read > 200_000
+          ? input.model.cost.experimentalOver200K
+          : input.model.cost
       return {
-        cost: new Decimal(0)
-          .add(new Decimal(tokens.input).mul(input.model.cost?.input ?? 0).div(1_000_000))
-          .add(new Decimal(tokens.output).mul(input.model.cost?.output ?? 0).div(1_000_000))
-          .add(new Decimal(tokens.cache.read).mul(input.model.cost?.cache_read ?? 0).div(1_000_000))
-          .add(
-            new Decimal(tokens.cache.write).mul(input.model.cost?.cache_write ?? 0).div(1_000_000),
-          )
-          .toNumber(),
+        cost: safe(
+          new Decimal(0)
+            .add(new Decimal(tokens.input).mul(costInfo?.input ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.output).mul(costInfo?.output ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.cache.read).mul(costInfo?.cache?.read ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.cache.write).mul(costInfo?.cache?.write ?? 0).div(1_000_000))
+            // TODO: update models.dev to have better pricing model, for now:
+            // charge reasoning tokens at the same rate as output tokens
+            .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))
+            .toNumber(),
+        ),
         tokens,
       }
     },

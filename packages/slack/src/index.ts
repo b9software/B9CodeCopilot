@@ -1,5 +1,5 @@
 import { App } from "@slack/bolt"
-import { createOpencode, type ToolPart } from "@opencode-ai/sdk"
+import { createOpencode, type ToolPart } from "@kilocode/sdk" // kilocode_change
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -81,7 +81,10 @@ app.message(async ({ message, say }) => {
 
     if (createResult.error) {
       console.error("❌ Failed to create session:", createResult.error)
-      await say({ text: "Sorry, I had trouble creating a session. Please try again.", thread_ts: thread })
+      await say({
+        text: "Sorry, I had trouble creating a session. Please try again.",
+        thread_ts: thread,
+      })
       return
     }
 
@@ -108,7 +111,10 @@ app.message(async ({ message, say }) => {
 
   if (result.error) {
     console.error("❌ Failed to send message:", result.error)
-    await say({ text: "Sorry, I had trouble processing your message. Please try again.", thread_ts: thread })
+    await say({
+      text: "Sorry, I had trouble processing your message. Please try again.",
+      thread_ts: thread,
+    })
     return
   }
 

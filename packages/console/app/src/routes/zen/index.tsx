@@ -1,8 +1,9 @@
 import "./index.css"
 import { createAsync, query, redirect } from "@solidjs/router"
 import { Title, Meta, Link } from "@solidjs/meta"
-import { HttpHeader } from "@solidjs/start"
+//import { HttpHeader } from "@solidjs/start"
 import zenLogoLight from "../../asset/zen-ornate-light.svg"
+import { config } from "~/config"
 import zenLogoDark from "../../asset/zen-ornate-dark.svg"
 import compareVideo from "../../asset/lander/opencode-comparison-min.mp4"
 import compareVideoPoster from "../../asset/lander/opencode-comparison-poster.png"
@@ -17,34 +18,36 @@ import { Legal } from "~/component/legal"
 import { Footer } from "~/component/footer"
 import { Header } from "~/component/header"
 import { getLastSeenWorkspaceID } from "../workspace/common"
+import { IconGemini, IconZai } from "~/component/icon"
 
 const checkLoggedIn = query(async () => {
   "use server"
-  const workspaceID = await getLastSeenWorkspaceID()
+  const workspaceID = await getLastSeenWorkspaceID().catch(() => {})
   if (workspaceID) throw redirect(`/workspace/${workspaceID}`)
 }, "checkLoggedIn.get")
 
 export default function Home() {
-  createAsync(() => checkLoggedIn())
+  const loggedin = createAsync(() => checkLoggedIn())
   return (
     <main data-page="zen">
-      <HttpHeader name="Cache-Control" value="public, max-age=1, s-maxage=3600, stale-while-revalidate=86400" />
-      <Title>OpenCode Zen | A curated set of reliable optimized models for coding agents</Title>
-      <Link rel="icon" type="image/svg+xml" href="/favicon-zen.svg" />
+      {/*<HttpHeader name="Cache-Control" value="public, max-age=1, s-maxage=3600, stale-while-revalidate=86400" />*/}
+      <Title>Kilo CLI Zen | A curated set of reliable optimized models for coding agents</Title>
+      <Link rel="canonical" href={`${config.baseUrl}/zen`} />
       <Meta property="og:image" content="/social-share-zen.png" />
       <Meta name="twitter:image" content="/social-share-zen.png" />
+      <Meta name="opencode:auth" content={loggedin() ? "true" : "false"} />
 
       <div data-component="container">
-        <Header zen />
+        <Header zen hideGetStarted />
 
         <div data-component="content">
           <section data-component="hero">
             <div data-slot="hero-copy">
               <img data-slot="zen logo light" src={zenLogoLight} alt="zen logo light" />
               <img data-slot="zen logo dark" src={zenLogoDark} alt="zen logo dark" />
-              <strong>Reliable optimized models for coding agents</strong>
+              <h1>Reliable optimized models for coding agents</h1>
               <p>
-                Zen gives you access to a curated set of AI models that OpenCode has tested and benchmarked specifically
+                Zen gives you access to a curated set of AI models that Kilo CLI has tested and benchmarked specifically
                 for coding agents. No need to worry about inconsistent performance and quality, use validated models
                 that work.
               </p>
@@ -80,6 +83,9 @@ export default function Home() {
                   </svg>
                 </div>
                 <div>
+                  <IconGemini width="24" height="24" />
+                </div>
+                <div>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                       d="M9.16861 16.0529L17.2018 9.85156C17.5957 9.54755 18.1586 9.66612 18.3463 10.1384C19.3339 12.6288 18.8926 15.6217 16.9276 17.6766C14.9626 19.7314 12.2285 20.1821 9.72948 19.1557L6.9995 20.4775C10.9151 23.2763 15.6699 22.5841 18.6411 19.4749C20.9979 17.0103 21.7278 13.6508 21.0453 10.6214L21.0515 10.6278C20.0617 6.17736 21.2948 4.39847 23.8207 0.760904C23.8804 0.674655 23.9402 0.588405 24 0.5L20.6762 3.97585V3.96506L9.16658 16.0551"
@@ -108,6 +114,9 @@ export default function Home() {
                       fill="currentColor"
                     />
                   </svg>
+                </div>
+                <div>
+                  <IconZai width="24" height="24" />
                 </div>
               </div>
               <a href="/auth">
@@ -144,7 +153,7 @@ export default function Home() {
                 configure them differently with varying results.
               </p>
             </div>
-            <p>We're fixing this for everyone, not just OpenCode users.</p>
+            <p>We're fixing this for everyone, not just Kilo CLI users.</p>
             <ul>
               <li>
                 <span>[*]</span> Testing select models and consulting their teams
@@ -161,7 +170,7 @@ export default function Home() {
           <section data-component="how">
             <div data-slot="section-title">
               <h3>How Zen works</h3>
-              <p>While we suggest you use Zen with OpenCode, you can use Zen with any agent.</p>
+              <p>While we suggest you use Zen with Kilo CLI, you can use Zen with any agent.</p>
             </div>
             <ul>
               <li>
@@ -212,7 +221,7 @@ export default function Home() {
                   <span>ex-CEO, Terminal Products</span>
                 </div>
                 <div data-slot="quote">
-                  <span>@OpenCode</span> Zen has been life changing, it's truly a no-brainer.
+                  <span>@KiloCLI</span> Zen has been life changing, it's truly a no-brainer.
                 </div>
               </div>
             </a>
@@ -225,7 +234,7 @@ export default function Home() {
                   <span>ex-Founder, SEED, PM, Melt, Pop, Dapt, Cadmus, and ViewPoint</span>
                 </div>
                 <div data-slot="quote">
-                  4 out of 5 people on our team love using <span>@OpenCode</span> Zen.
+                  4 out of 5 people on our team love using <span>@KiloCLI</span> Zen.
                 </div>
               </div>
             </a>
@@ -238,7 +247,7 @@ export default function Home() {
                   <span>ex-Hero, AWS</span>
                 </div>
                 <div data-slot="quote">
-                  I can't recommend <span>@OpenCode</span> Zen enough. Seriously, it’s really good.
+                  I can't recommend <span>@KiloCLI</span> Zen enough. Seriously, it's really good.
                 </div>
               </div>
             </a>
@@ -251,7 +260,7 @@ export default function Home() {
                   <span>ex-Head of Design, Laravel</span>
                 </div>
                 <div data-slot="quote">
-                  With <span>@OpenCode</span> Zen I know all the models are tested and perfect for coding agents.
+                  With <span>@KiloCLI</span> Zen I know all the models are tested and perfect for coding agents.
                 </div>
               </div>
             </a>
@@ -274,9 +283,9 @@ export default function Home() {
             </div>
             <ul>
               <li>
-                <Faq question="What is OpenCode Zen?">
+                <Faq question="What is Kilo CLI Zen?">
                   Zen is a curated set of AI models tested and benchmarked for coding agents created by the team behind
-                  OpenCode.
+                  Kilo CLI.
                 </Faq>
               </li>
               <li>
@@ -287,15 +296,15 @@ export default function Home() {
               </li>
               <li>
                 <Faq question="Is Zen cheaper?">
-                  Zen is not for profit. Zen passes through the costs from the model providers to you. The higher Zen’s
-                  usage the more OpenCode can negotiate better rates and pass those to you.
+                  Zen is not for profit. Zen passes through the costs from the model providers to you. The higher Zen's
+                  usage the more Kilo CLI can negotiate better rates and pass those to you.
                 </Faq>
               </li>
               <li>
                 <Faq question="How much does Zen cost?">
                   Zen <a href="/docs/zen/#pricing">charges per request</a> with zero markups, so you pay exactly what
                   the model provider charges. Your total cost depends on usage, and you can set monthly spend limits in
-                  your <a href="/auth">account</a>. To cover costs, OpenCode adds only a small payment processing fee of
+                  your <a href="/auth">account</a>. To cover costs, Kilo CLI adds only a small payment processing fee of
                   $1.23 per $20 balance top-up.
                 </Faq>
               </li>
@@ -315,7 +324,7 @@ export default function Home() {
               </li>
               <li>
                 <Faq question="Can I use Zen with other coding agents?">
-                  While Zen works great with OpenCode, you can use Zen with any agent. Follow the setup instructions in
+                  While Zen works great with Kilo CLI, you can use Zen with any agent. Follow the setup instructions in
                   your preferred coding agent.
                 </Faq>
               </li>

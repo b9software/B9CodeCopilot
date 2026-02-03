@@ -7,7 +7,8 @@ import { Log } from "../util/log"
 import { splitWhen } from "remeda"
 import { Storage } from "../storage/storage"
 import { Bus } from "../bus"
-import { SessionLock } from "./lock"
+import { SessionPrompt } from "./prompt"
+import { SessionSummary } from "./summary"
 
 export namespace SessionRevert {
   const log = Log.create({ service: "session.revert" })
@@ -20,12 +21,8 @@ export namespace SessionRevert {
   export type RevertInput = z.infer<typeof RevertInput>
 
   export async function revert(input: RevertInput) {
-    SessionLock.assertUnlocked(input.sessionID)
-    using _ = SessionLock.acquire({
-      sessionID: input.sessionID,
-    })
-
-    const all = await Session.messages(input.sessionID)
+    SessionPrompt.assertNotBusy(input.sessionID)
+    const all = await Session.messages({ sessionID: input.sessionID })
     let lastUser: MessageV2.User | undefined
     const session = await Session.get(input.sessionID)
 
@@ -61,8 +58,20 @@ export namespace SessionRevert {
       revert.snapshot = session.revert?.snapshot ?? (await Snapshot.track())
       await Snapshot.revert(patches)
       if (revert.snapshot) revert.diff = await Snapshot.diff(revert.snapshot)
+      const rangeMessages = all.filter((msg) => msg.info.id >= revert!.messageID)
+      const diffs = await SessionSummary.computeDiff({ messages: rangeMessages })
+      await Storage.write(["session_diff", input.sessionID], diffs)
+      Bus.publish(Session.Event.Diff, {
+        sessionID: input.sessionID,
+        diff: diffs,
+      })
       return Session.update(input.sessionID, (draft) => {
         draft.revert = revert
+        draft.summary = {
+          additions: diffs.reduce((sum, x) => sum + x.additions, 0),
+          deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
+          files: diffs.length,
+        }
       })
     }
     return session
@@ -70,10 +79,7 @@ export namespace SessionRevert {
 
   export async function unrevert(input: { sessionID: string }) {
     log.info("unreverting", input)
-    SessionLock.assertUnlocked(input.sessionID)
-    using _ = SessionLock.acquire({
-      sessionID: input.sessionID,
-    })
+    SessionPrompt.assertNotBusy(input.sessionID)
     const session = await Session.get(input.sessionID)
     if (!session.revert) return session
     if (session.revert.snapshot) await Snapshot.restore(session.revert.snapshot)
@@ -86,7 +92,7 @@ export namespace SessionRevert {
   export async function cleanup(session: Session.Info) {
     if (!session.revert) return
     const sessionID = session.id
-    let msgs = await Session.messages(sessionID)
+    let msgs = await Session.messages({ sessionID })
     const messageID = session.revert.messageID
     const [preserve, remove] = splitWhen(msgs, (x) => x.info.id === messageID)
     msgs = preserve

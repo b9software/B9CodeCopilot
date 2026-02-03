@@ -1,32 +1,22 @@
-# Contributing to OpenCode
+# Contributing to Kilo CLI
 
-We want to make it easy for you to contribute to OpenCode. Here are the most common type of changes that get merged:
+See [the Documentation for details on contributing](https://kilo.ai/docs/extending/contributing-to-kilo).
 
-- Bug fixes
-- Additional LSPs / Formatters
-- Improvements to LLM performance
-- Support for new providers
-- Fixes for environment-specific quirks
-- Missing standard behavior
-- Documentation improvements
+## TL;DR
 
-However, any UI or core product feature must go through a design review with the core team before implementation.
+There are lots of ways to contribute to the project:
 
-If you are unsure if a PR would be accepted, feel free to ask a maintainer or look for issues with any of the following labels:
+- **Code Contributions:** Implement new features or fix bugs
+- **Documentation:** Improve existing docs or create new guides
+- **Bug Reports:** Report issues you encounter
+- **Feature Requests:** Suggest new features or improvements
+- **Community Support:** Help other users in the community
 
-- [`help wanted`](https://github.com/sst/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3Ahelp-wanted)
-- [`good first issue`](https://github.com/sst/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)
-- [`bug`](https://github.com/sst/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug)
-- [`perf`](https://github.com/sst/opencode/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22perf%22)
+The Kilo Community is [on Discord](https://kilo.ai/discord).
 
-> [!NOTE]
-> PRs that ignore these guardrails will likely be closed.
+## Developing Kilo CLI
 
-Want to take on an issue? Leave a comment and a maintainer may assign it to you unless it is something we are already working on.
-
-## Developing OpenCode
-
-- Requirements: Bun 1.3+
+- **Requirements:** Bun 1.3+
 - Install dependencies and start the dev server from the repo root:
 
   ```bash
@@ -34,35 +24,65 @@ Want to take on an issue? Leave a comment and a maintainer may assign it to you 
   bun dev
   ```
 
-- Core pieces:
-  - `packages/opencode`: OpenCode core business logic & server.
-  - `packages/opencode/src/cli/cmd/tui/`: The TUI code, written in SolidJS with [opentui](https://github.com/sst/opentui)
-  - `packages/plugin`: Source for `@opencode-ai/plugin`
+### Running against a different directory
 
-> [!NOTE]
-> After touching `packages/opencode/src/server/server.ts`, run "./packages/sdk/js/script/build.ts" to regenerate the JS sdk.
+By default, `bun dev` runs Kilo CLI in the `packages/kilo-cli` directory. To run it against a different directory or repository:
 
-## Pull Request Expectations
+```bash
+bun dev <directory>
+```
 
-- Try to keep pull requests small and focused.
-- Link relevant issue(s) in the description
-- Explain the issue and why your change fixes it
-- Avoid having verbose LLM generated PR descriptions
-- Before adding new functions or functionality, ensure that such behavior doesn't already exist elsewhere in the codebase.
+To run Kilo CLI in the root of the repo itself:
+
+```bash
+bun dev .
+```
+
+### Building a "local" binary
+
+To compile a standalone executable:
+
+```bash
+./packages/kilo-cli/script/build.ts --single
+```
+
+Then run it with:
+
+```bash
+./packages/kilo-cli/dist/kilo-cli-<platform>/bin/kilo
+```
+
+Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).
+
+### Understanding bun dev vs kilo
+
+During development, `bun dev` is the local equivalent of the built `kilo` command. Both run the same CLI interface:
+
+```bash
+# Development (from project root)
+bun dev --help           # Show all available commands
+bun dev serve            # Start headless API server
+bun dev web              # Start server + open web interface
+
+# Production
+kilo --help          # Show all available commands
+kilo serve           # Start headless API server
+kilo web             # Start server + open web interface
+```
+
+### Pull Request Expectations
+
+- **Issue First Policy:** All PRs must reference an existing issue.
+- **UI Changes:** Include screenshots or videos (before/after).
+- **Logic Changes:** Explain how you verified it works.
+- **PR Titles:** Follow conventional commit standards (`feat:`, `fix:`, `docs:`, etc.).
 
 ### Style Preferences
 
-These are not strictly enforced, they are just general guidelines:
-
-- **Functions:** Keep logic within a single function unless breaking it out adds clear reuse or composition benefits.
-- **Destructuring:** Do not do unnecessary destructuring of variables.
-- **Control flow:** Avoid `else` statements.
-- **Error handling:** Prefer `.catch(...)` instead of `try`/`catch` when possible.
-- **Types:** Reach for precise types and avoid `any`.
-- **Variables:** Stick to immutable patterns and avoid `let`.
-- **Naming:** Choose concise single-word identifiers when they remain descriptive.
-- **Runtime APIs:** Use Bun helpers such as `Bun.file()` when they fit the use case.
-
-## Feature Requests
-
-For net-new functionality, start with a design conversation. Open an issue describing the problem, your proposed approach (optional), and why it belongs in OpenCode. The core team will help decide whether it should move forward; please wait for that approval instead of opening a feature PR directly.
+- **Functions:** Keep logic within a single function unless breaking it out adds clear reuse.
+- **Destructuring:** Avoid unnecessary destructuring.
+- **Control flow:** Avoid `else` statements; prefer early returns.
+- **Types:** Avoid `any`.
+- **Variables:** Prefer `const`.
+- **Naming:** Concise single-word identifiers when descriptive.
+- **Runtime APIs:** Use Bun helpers (e.g., `Bun.file()`).

@@ -3,7 +3,7 @@ import { tui } from "./app"
 
 export const AttachCommand = cmd({
   command: "attach <url>",
-  describe: "attach to a running opencode server",
+  describe: "attach to a running kilo server", // kilocode_change
   builder: (yargs) =>
     yargs
       .positional("url", {
@@ -14,9 +14,26 @@ export const AttachCommand = cmd({
       .option("dir", {
         type: "string",
         description: "directory to run in",
+      })
+      .option("session", {
+        alias: ["s"],
+        type: "string",
+        describe: "session id to continue",
       }),
   handler: async (args) => {
-    if (args.dir) process.chdir(args.dir)
-    await tui(args)
+    let directory = args.dir
+    if (args.dir) {
+      try {
+        process.chdir(args.dir)
+        directory = process.cwd()
+      } catch {
+        // If the directory doesn't exist locally (remote attach), pass it through.
+      }
+    }
+    await tui({
+      url: args.url,
+      args: { sessionID: args.session },
+      directory,
+    })
   },
 })

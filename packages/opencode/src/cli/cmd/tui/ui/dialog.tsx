@@ -1,23 +1,11 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { batch, createContext, createEffect, Show, useContext, type JSX, type ParentProps } from "solid-js"
+import { batch, createContext, Show, useContext, type JSX, type ParentProps } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import { Renderable, RGBA } from "@opentui/core"
 import { createStore } from "solid-js/store"
-import { createEventBus } from "@solid-primitives/event-bus"
+import { Clipboard } from "@tui/util/clipboard"
+import { useToast } from "./toast"
 
-const Border = {
-  topLeft: "┃",
-  topRight: "┃",
-  bottomLeft: "┃",
-  bottomRight: "┃",
-  horizontal: "",
-  vertical: "┃",
-  topT: "+",
-  bottomT: "+",
-  leftT: "+",
-  rightT: "+",
-  cross: "+",
-}
 export function Dialog(
   props: ParentProps<{
     size?: "medium" | "large"
@@ -26,10 +14,12 @@ export function Dialog(
 ) {
   const dimensions = useTerminalDimensions()
   const { theme } = useTheme()
+  const renderer = useRenderer()
 
   return (
     <box
       onMouseUp={async () => {
+        if (renderer.getSelection()) return
         props.onClose?.()
       }}
       width={dimensions().width}
@@ -43,13 +33,12 @@ export function Dialog(
     >
       <box
         onMouseUp={async (e) => {
+          if (renderer.getSelection()) return
           e.stopPropagation()
         }}
-        customBorderChars={Border}
         width={props.size === "large" ? 80 : 60}
         maxWidth={dimensions().width - 2}
         backgroundColor={theme.backgroundPanel}
-        borderColor={theme.border}
         paddingTop={1}
       >
         {props.children}
@@ -66,7 +55,6 @@ function init() {
     }[],
     size: "medium" as "medium" | "large",
   })
-  const allClosedEvent = createEventBus<void>()
 
   useKeyboard((evt) => {
     if (evt.name === "escape" && store.stack.length > 0) {
@@ -74,6 +62,7 @@ function init() {
       current.onClose?.()
       setStore("stack", store.stack.slice(0, -1))
       evt.preventDefault()
+      evt.stopPropagation()
       refocus()
     }
   })
@@ -97,12 +86,6 @@ function init() {
     }, 1)
   }
 
-  createEffect(() => {
-    if (store.stack.length === 0) {
-      allClosedEvent.emit()
-    }
-  })
-
   return {
     clear() {
       for (const item of store.stack) {
@@ -115,7 +98,10 @@ function init() {
       refocus()
     },
     replace(input: any, onClose?: () => void) {
-      if (store.stack.length === 0) focus = renderer.currentFocusedRenderable
+      if (store.stack.length === 0) {
+        focus = renderer.currentFocusedRenderable
+        focus?.blur()
+      }
       for (const item of store.stack) {
         if (item.onClose) item.onClose()
       }
@@ -136,9 +122,6 @@ function init() {
     setSize(size: "medium" | "large") {
       setStore("size", size)
     },
-    get allClosedEvent() {
-      return allClosedEvent
-    }
   }
 }
 
@@ -148,10 +131,23 @@ const ctx = createContext<DialogContext>()
 
 export function DialogProvider(props: ParentProps) {
   const value = init()
+  const renderer = useRenderer()
+  const toast = useToast()
   return (
     <ctx.Provider value={value}>
       {props.children}
-      <box position="absolute">
+      <box
+        position="absolute"
+        onMouseUp={async () => {
+          const text = renderer.getSelection()?.getSelectedText()
+          if (text && text.length > 0) {
+            await Clipboard.copy(text)
+              .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+              .catch(toast.error)
+            renderer.clearSelection()
+          }
+        }}
+      >
         <Show when={value.stack.length}>
           <Dialog onClose={() => value.clear()} size={value.size}>
             {value.stack.at(-1)!.element}

@@ -1,7 +1,9 @@
 import path from "path"
 import { Global } from "../global"
-import fs from "fs/promises"
 import z from "zod"
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+
+export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
 
 export namespace Auth {
   export const Oauth = z
@@ -10,6 +12,8 @@ export namespace Auth {
       refresh: z.string(),
       access: z.string(),
       expires: z.number(),
+      accountId: z.string().optional(),
+      enterpriseUrl: z.string().optional(),
     })
     .meta({ ref: "OAuth" })
 
@@ -34,30 +38,41 @@ export namespace Auth {
   const filepath = path.join(Global.Path.data, "auth.json")
 
   export async function get(providerID: string) {
-    const file = Bun.file(filepath)
-    return file
-      .json()
-      .catch(() => ({}))
-      .then((x) => x[providerID] as Info | undefined)
+    const auth = await all()
+    return auth[providerID]
   }
 
   export async function all(): Promise<Record<string, Info>> {
     const file = Bun.file(filepath)
-    return file.json().catch(() => ({}))
+    const data = await file.json().catch(() => ({}) as Record<string, unknown>)
+    return Object.entries(data).reduce(
+      (acc, [key, value]) => {
+        const parsed = Info.safeParse(value)
+        if (!parsed.success) return acc
+        acc[key] = parsed.data
+        return acc
+      },
+      {} as Record<string, Info>,
+    )
   }
 
   export async function set(key: string, info: Info) {
     const file = Bun.file(filepath)
     const data = await all()
-    await Bun.write(file, JSON.stringify({ ...data, [key]: info }, null, 2))
-    await fs.chmod(file.name!, 0o600)
+    await Bun.write(file, JSON.stringify({ ...data, [key]: info }, null, 2), { mode: 0o600 })
   }
 
   export async function remove(key: string) {
     const file = Bun.file(filepath)
     const data = await all()
     delete data[key]
-    await Bun.write(file, JSON.stringify(data, null, 2))
-    await fs.chmod(file.name!, 0o600)
+    await Bun.write(file, JSON.stringify(data, null, 2), { mode: 0o600 })
+
+    // kilocode_change start - Track logout and reset telemetry identity for Kilo
+    if (key === "kilo") {
+      await Telemetry.updateIdentity(null)
+    }
+    Telemetry.trackAuthLogout(key)
+    // kilocode_change end
   }
 }

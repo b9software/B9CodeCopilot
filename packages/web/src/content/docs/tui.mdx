@@ -1,13 +1,13 @@
 ---
 title: TUI
-description: Using the OpenCode terminal user interface.
+description: Using the Kilo CLI terminal user interface.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components"
 
-OpenCode provides an interactive terminal interface or TUI for working on your projects with an LLM.
+Kilo CLI provides an interactive terminal interface or TUI for working on your projects with an LLM.
 
-Running OpenCode starts the TUI for the current directory.
+Running Kilo CLI starts the TUI for the current directory.
 
 ```bash
 opencode
@@ -57,7 +57,7 @@ The output of the command is added to the conversation as a tool result.
 
 ## Commands
 
-When using the OpenCode TUI, you can type `/` followed by a command name to quickly execute actions. For example:
+When using the Kilo CLI TUI, you can type `/` followed by a command name to quickly execute actions. For example:
 
 ```bash frame="none"
 /help
@@ -66,6 +66,16 @@ When using the OpenCode TUI, you can type `/` followed by a command name to quic
 Most commands also have keybind using `ctrl+x` as the leader key, where `ctrl+x` is the default leader key. [Learn more](/docs/keybinds).
 
 Here are all available slash commands:
+
+---
+
+### connect
+
+Add a provider to Kilo CLI. Allows you to select from available providers and add their API keys.
+
+```bash frame="none"
+/connect
+```
 
 ---
 
@@ -107,7 +117,7 @@ Open external editor for composing messages. Uses the editor set in your `EDITOR
 
 ### exit
 
-Exit OpenCode. _Aliases_: `/quit`, `/q`
+Exit Kilo CLI. _Aliases_: `/quit`, `/q`
 
 ```bash frame="none"
 /exit
@@ -225,10 +235,24 @@ Share current session. [Learn more](/docs/share).
 List available themes.
 
 ```bash frame="none"
-/themes
+/theme
 ```
 
 **Keybind:** `ctrl+x t`
+
+---
+
+### thinking
+
+Toggle the visibility of thinking/reasoning blocks in the conversation. When enabled, you can see the model's reasoning process for models that support extended thinking.
+
+:::note
+This command only controls whether thinking blocks are **displayed** - it does not enable or disable the model's reasoning capabilities. To toggle actual reasoning capabilities, use `ctrl+t` to cycle through model variants.
+:::
+
+```bash frame="none"
+/thinking
+```
 
 ---
 
@@ -315,6 +339,7 @@ Popular editor options include:
 - `code` - Visual Studio Code
 - `cursor` - Cursor
 - `windsurf` - Windsurf
+- `nvim` - Neovim editor
 - `vim` - Vim editor
 - `nano` - Nano editor
 - `notepad` - Windows Notepad
@@ -330,17 +355,36 @@ Some editors need command-line arguments to run in blocking mode. The `--wait` f
 
 ## Configure
 
-You can customize TUI behavior through your OpenCode config file.
+You can customize TUI behavior through your Kilo CLI config file.
 
 ```json title="opencode.json"
 {
   "$schema": "https://opencode.ai/config.json",
   "tui": {
-    "scroll_speed": 3
+    "scroll_speed": 3,
+    "scroll_acceleration": {
+      "enabled": true
+    }
   }
 }
 ```
 
 ### Options
 
-- `scroll_speed` - Controls how fast the TUI scrolls when using scroll commands (default: `2`, minimum: `1`)
+- `scroll_acceleration` - Enable macOS-style scroll acceleration for smooth, natural scrolling. When enabled, scroll speed increases with rapid scrolling gestures and stays precise for slower movements. **This setting takes precedence over `scroll_speed` and overrides it when enabled.**
+- `scroll_speed` - Controls how fast the TUI scrolls when using scroll commands (minimum: `1`). Defaults to `3`. **Note: This is ignored if `scroll_acceleration.enabled` is set to `true`.**
+
+---
+
+## Customization
+
+You can customize various aspects of the TUI view using the command palette (`ctrl+x h` or `/help`). These settings persist across restarts.
+
+---
+
+#### Username display
+
+Toggle whether your username appears in chat messages. Access this through:
+
+- Command palette: Search for "username" or "hide username"
+- The setting persists automatically and will be remembered across TUI sessions

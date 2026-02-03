@@ -1,19 +1,80 @@
 import { Provider } from "@/provider/provider"
+
 import { fn } from "@/util/fn"
 import z from "zod"
 import { Session } from "."
-import { generateText, type ModelMessage } from "ai"
+
 import { MessageV2 } from "./message-v2"
 import { Identifier } from "@/id/id"
 import { Snapshot } from "@/snapshot"
-import { ProviderTransform } from "@/provider/transform"
-import { SystemPrompt } from "./system"
+
 import { Log } from "@/util/log"
 import path from "path"
 import { Instance } from "@/project/instance"
+import { Storage } from "@/storage/storage"
+import { Bus } from "@/bus"
+
+import { LLM } from "./llm"
+import { Agent } from "@/agent/agent"
 
 export namespace SessionSummary {
   const log = Log.create({ service: "session.summary" })
+
+  function unquoteGitPath(input: string) {
+    if (!input.startsWith('"')) return input
+    if (!input.endsWith('"')) return input
+    const body = input.slice(1, -1)
+    const bytes: number[] = []
+
+    for (let i = 0; i < body.length; i++) {
+      const char = body[i]!
+      if (char !== "\\") {
+        bytes.push(char.charCodeAt(0))
+        continue
+      }
+
+      const next = body[i + 1]
+      if (!next) {
+        bytes.push("\\".charCodeAt(0))
+        continue
+      }
+
+      if (next >= "0" && next <= "7") {
+        const chunk = body.slice(i + 1, i + 4)
+        const match = chunk.match(/^[0-7]{1,3}/)
+        if (!match) {
+          bytes.push(next.charCodeAt(0))
+          i++
+          continue
+        }
+        bytes.push(parseInt(match[0], 8))
+        i += match[0].length
+        continue
+      }
+
+      const escaped =
+        next === "n"
+          ? "\n"
+          : next === "r"
+            ? "\r"
+            : next === "t"
+              ? "\t"
+              : next === "b"
+                ? "\b"
+                : next === "f"
+                  ? "\f"
+                  : next === "v"
+                    ? "\v"
+                    : next === "\\" || next === '"'
+                      ? next
+                      : undefined
+
+      bytes.push((escaped ?? next).charCodeAt(0))
+      i++
+    }
+
+    return Buffer.from(bytes).toString()
+  }
 
   export const summarize = fn(
     z.object({
@@ -21,7 +82,7 @@ export namespace SessionSummary {
       messageID: z.string(),
     }),
     async (input) => {
-      const all = await Session.messages(input.sessionID)
+      const all = await Session.messages({ sessionID: input.sessionID })
       await Promise.all([
         summarizeSession({ sessionID: input.sessionID, messages: all }),
         summarizeMessage({ messageID: input.messageID, messages: all }),
@@ -35,7 +96,7 @@ export namespace SessionSummary {
         .flatMap((x) => x.parts)
         .filter((x) => x.type === "patch")
         .flatMap((x) => x.files)
-        .map((x) => path.relative(Instance.worktree, x)),
+        .map((x) => path.relative(Instance.worktree, x).replaceAll("\\", "/")),
     )
     const diffs = await computeDiff({ messages: input.messages }).then((x) =>
       x.filter((x) => {
@@ -44,16 +105,21 @@ export namespace SessionSummary {
     )
     await Session.update(input.sessionID, (draft) => {
       draft.summary = {
-        diffs,
+        additions: diffs.reduce((sum, x) => sum + x.additions, 0),
+        deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
+        files: diffs.length,
       }
+    })
+    await Storage.write(["session_diff", input.sessionID], diffs)
+    Bus.publish(Session.Event.Diff, {
+      sessionID: input.sessionID,
+      diff: diffs,
     })
   }
 
   async function summarizeMessage(input: { messageID: string; messages: MessageV2.WithParts[] }) {
     const messages = input.messages.filter(
-      (m) =>
-        m.info.id === input.messageID ||
-        (m.info.role === "assistant" && m.info.parentID === input.messageID),
+      (m) => m.info.id === input.messageID || (m.info.role === "assistant" && m.info.parentID === input.messageID),
     )
     const msgWithParts = messages.find((m) => m.info.id === input.messageID)!
     const userMsg = msgWithParts.info as MessageV2.User
@@ -64,25 +130,20 @@ export namespace SessionSummary {
     }
     await Session.updateMessage(userMsg)
 
-    const assistantMsg = messages.find((m) => m.info.role === "assistant")!
-      .info as MessageV2.Assistant
-    const small = await Provider.getSmallModel(assistantMsg.providerID)
-    if (!small) return
-
-    const textPart = msgWithParts.parts.find(
-      (p) => p.type === "text" && !p.synthetic,
-    ) as MessageV2.TextPart
+    const textPart = msgWithParts.parts.find((p) => p.type === "text" && !p.synthetic) as MessageV2.TextPart
     if (textPart && !userMsg.summary?.title) {
-      const result = await generateText({
-        maxOutputTokens: small.info.reasoning ? 1500 : 20,
-        providerOptions: ProviderTransform.providerOptions(small.npm, small.providerID, {}),
+      const agent = await Agent.get("title")
+      if (!agent) return
+      const stream = await LLM.stream({
+        agent,
+        user: userMsg,
+        tools: {},
+        model: agent.model
+          ? await Provider.getModel(agent.model.providerID, agent.model.modelID)
+          : ((await Provider.getSmallModel(userMsg.model.providerID)) ??
+            (await Provider.getModel(userMsg.model.providerID, userMsg.model.modelID))),
+        small: true,
         messages: [
-          ...SystemPrompt.title(small.providerID).map(
-            (x): ModelMessage => ({
-              role: "system",
-              content: x,
-            }),
-          ),
           {
             role: "user" as const,
             content: `
@@ -93,45 +154,14 @@ export namespace SessionSummary {
             `,
           },
         ],
-        headers: small.info.headers,
-        model: small.language,
+        abort: new AbortController().signal,
+        sessionID: userMsg.sessionID,
+        system: [],
+        retries: 3,
       })
-      log.info("title", { title: result.text })
-      userMsg.summary.title = result.text
-      await Session.updateMessage(userMsg)
-    }
-
-    if (
-      messages.some(
-        (m) =>
-          m.info.role === "assistant" &&
-          m.parts.some((p) => p.type === "step-finish" && p.reason !== "tool-calls"),
-      )
-    ) {
-      let summary = messages
-        .findLast((m) => m.info.role === "assistant")
-        ?.parts.findLast((p) => p.type === "text")?.text
-      if (!summary || diffs.length > 0) {
-        const result = await generateText({
-          model: small.language,
-          maxOutputTokens: 100,
-          messages: [
-            {
-              role: "user",
-              content: `
-            Summarize the following conversation into 2 sentences MAX explaining what the assistant did and why. Do not explain the user's input. Do not speak in the third person about the assistant.
-            <conversation>
-            ${JSON.stringify(MessageV2.toModelMessage(messages))}
-            </conversation>
-            `,
-            },
-          ],
-          headers: small.info.headers,
-        }).catch(() => {})
-        if (result) summary = result.text
-      }
-      userMsg.summary.body = summary
-      log.info("body", { body: summary })
+      const result = await stream.text
+      log.info("title", { title: result })
+      userMsg.summary.title = result
       await Session.updateMessage(userMsg)
     }
   }
@@ -142,21 +172,22 @@ export namespace SessionSummary {
       messageID: Identifier.schema("message").optional(),
     }),
     async (input) => {
-      let all = await Session.messages(input.sessionID)
-      if (input.messageID)
-        all = all.filter(
-          (x) =>
-            x.info.id === input.messageID ||
-            (x.info.role === "assistant" && x.info.parentID === input.messageID),
-        )
-
-      return computeDiff({
-        messages: all,
+      const diffs = await Storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).catch(() => [])
+      const next = diffs.map((item) => {
+        const file = unquoteGitPath(item.file)
+        if (file === item.file) return item
+        return {
+          ...item,
+          file,
+        }
       })
+      const changed = next.some((item, i) => item.file !== diffs[i]?.file)
+      if (changed) Storage.write(["session_diff", input.sessionID], next).catch(() => {})
+      return next
     },
   )
 
-  async function computeDiff(input: { messages: MessageV2.WithParts[] }) {
+  export async function computeDiff(input: { messages: MessageV2.WithParts[] }) {
     let from: string | undefined
     let to: string | undefined
 

@@ -11,11 +11,18 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # kilocode_change start - disabled for kilo-cli fork (OpenCode infrastructure deployment)
+    if: false
+    # kilocode_change end
+    runs-on: depot-ubuntu-24.04-4
     steps:
       - uses: actions/checkout@v3
 
       - uses: ./.github/actions/setup-bun
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
 
       - run: bun sst deploy --stage=${{ github.ref_name }}
         env:

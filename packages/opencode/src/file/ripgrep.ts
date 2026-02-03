@@ -3,13 +3,15 @@ import path from "path"
 import { Global } from "../global"
 import fs from "fs/promises"
 import z from "zod"
-import { NamedError } from "../util/error"
+import { NamedError } from "@opencode-ai/util/error"
 import { lazy } from "../util/lazy"
 import { $ } from "bun"
 
 import { ZipReader, BlobReader, BlobWriter } from "@zip.js/zip.js"
+import { Log } from "@/util/log"
 
 export namespace Ripgrep {
+  const log = Log.create({ service: "ripgrep" })
   const Stats = z.object({
     elapsed: z.object({
       secs: z.number(),
@@ -160,34 +162,32 @@ export namespace Ripgrep {
           })
       }
       if (config.extension === "zip") {
-        if (config.extension === "zip") {
-          const zipFileReader = new ZipReader(new BlobReader(new Blob([await Bun.file(archivePath).arrayBuffer()])))
-          const entries = await zipFileReader.getEntries()
-          let rgEntry: any
-          for (const entry of entries) {
-            if (entry.filename.endsWith("rg.exe")) {
-              rgEntry = entry
-              break
-            }
+        const zipFileReader = new ZipReader(new BlobReader(new Blob([await Bun.file(archivePath).arrayBuffer()])))
+        const entries = await zipFileReader.getEntries()
+        let rgEntry: any
+        for (const entry of entries) {
+          if (entry.filename.endsWith("rg.exe")) {
+            rgEntry = entry
+            break
           }
-
-          if (!rgEntry) {
-            throw new ExtractionFailedError({
-              filepath: archivePath,
-              stderr: "rg.exe not found in zip archive",
-            })
-          }
-
-          const rgBlob = await rgEntry.getData(new BlobWriter())
-          if (!rgBlob) {
-            throw new ExtractionFailedError({
-              filepath: archivePath,
-              stderr: "Failed to extract rg.exe from zip archive",
-            })
-          }
-          await Bun.write(filepath, await rgBlob.arrayBuffer())
-          await zipFileReader.close()
         }
+
+        if (!rgEntry) {
+          throw new ExtractionFailedError({
+            filepath: archivePath,
+            stderr: "rg.exe not found in zip archive",
+          })
+        }
+
+        const rgBlob = await rgEntry.getData(new BlobWriter())
+        if (!rgBlob) {
+          throw new ExtractionFailedError({
+            filepath: archivePath,
+            stderr: "Failed to extract rg.exe from zip archive",
+          })
+        }
+        await Bun.write(filepath, await rgBlob.arrayBuffer())
+        await zipFileReader.close()
       }
       await fs.unlink(archivePath)
       if (!platformKey.endsWith("-win32")) await fs.chmod(filepath, 0o755)
@@ -203,8 +203,20 @@ export namespace Ripgrep {
     return filepath
   }
 
-  export async function* files(input: { cwd: string; glob?: string[] }) {
-    const args = [await filepath(), "--files", "--follow", "--hidden", "--glob=!.git/*"]
+  export async function* files(input: {
+    cwd: string
+    glob?: string[]
+    hidden?: boolean
+    follow?: boolean
+    maxDepth?: number
+    signal?: AbortSignal
+  }) {
+    input.signal?.throwIfAborted()
+
+    const args = [await filepath(), "--files", "--glob=!.git/*"]
+    if (input.follow !== false) args.push("--follow")
+    if (input.hidden !== false) args.push("--hidden")
+    if (input.maxDepth !== undefined) args.push(`--max-depth=${input.maxDepth}`)
     if (input.glob) {
       for (const g of input.glob) {
         args.push(`--glob=${g}`)
@@ -226,6 +238,7 @@ export namespace Ripgrep {
       stdout: "pipe",
       stderr: "ignore",
       maxBuffer: 1024 * 1024 * 20,
+      signal: input.signal,
     })
 
     const reader = proc.stdout.getReader()
@@ -234,11 +247,14 @@ export namespace Ripgrep {
 
     try {
       while (true) {
+        input.signal?.throwIfAborted()
+
         const { done, value } = await reader.read()
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split("\n")
+        // Handle both Unix (\n) and Windows (\r\n) line endings
+        const lines = buffer.split(/\r?\n/)
         buffer = lines.pop() || ""
 
         for (const line of lines) {
@@ -251,10 +267,13 @@ export namespace Ripgrep {
       reader.releaseLock()
       await proc.exited
     }
+
+    input.signal?.throwIfAborted()
   }
 
-  export async function tree(input: { cwd: string; limit?: number }) {
-    const files = await Array.fromAsync(Ripgrep.files({ cwd: input.cwd }))
+  export async function tree(input: { cwd: string; limit?: number; signal?: AbortSignal }) {
+    log.info("tree", input)
+    const files = await Array.fromAsync(Ripgrep.files({ cwd: input.cwd, signal: input.signal }))
     interface Node {
       path: string[]
       children: Node[]
@@ -354,8 +373,15 @@ export namespace Ripgrep {
     return lines.join("\n")
   }
 
-  export async function search(input: { cwd: string; pattern: string; glob?: string[]; limit?: number }) {
+  export async function search(input: {
+    cwd: string
+    pattern: string
+    glob?: string[]
+    limit?: number
+    follow?: boolean
+  }) {
     const args = [`${await filepath()}`, "--json", "--hidden", "--glob='!.git/*'"]
+    if (input.follow !== false) args.push("--follow")
 
     if (input.glob) {
       for (const g of input.glob) {
@@ -376,7 +402,8 @@ export namespace Ripgrep {
       return []
     }
 
-    const lines = result.text().trim().split("\n").filter(Boolean)
+    // Handle both Unix (\n) and Windows (\r\n) line endings
+    const lines = result.text().trim().split(/\r?\n/).filter(Boolean)
     // Parse JSON lines from ripgrep output
 
     return lines

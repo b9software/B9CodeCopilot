@@ -1,31 +1,47 @@
+import { QuestionTool } from "./question"
 import { BashTool } from "./bash"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
-import { ListTool } from "./ls"
-import { PatchTool } from "./patch"
+import { BatchTool } from "./batch"
 import { ReadTool } from "./read"
 import { TaskTool } from "./task"
 import { TodoWriteTool, TodoReadTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
+import { SkillTool } from "./skill"
 import type { Agent } from "../agent/agent"
 import { Tool } from "./tool"
 import { Instance } from "../project/instance"
 import { Config } from "../config/config"
 import path from "path"
-import { type ToolDefinition } from "@opencode-ai/plugin"
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin" // kilocode_change
 import z from "zod"
 import { Plugin } from "../plugin"
+import { WebSearchTool } from "./websearch"
+import { CodeSearchTool } from "./codesearch"
+import { Flag } from "@/flag/flag"
+import { Log } from "@/util/log"
+import { LspTool } from "./lsp"
+import { Truncate } from "./truncation"
+import { PlanExitTool, PlanEnterTool } from "./plan"
+import { ApplyPatchTool } from "./apply_patch"
 
 export namespace ToolRegistry {
+  const log = Log.create({ service: "tool.registry" })
+
   export const state = Instance.state(async () => {
     const custom = [] as Tool.Info[]
-    const glob = new Bun.Glob("tool/*.{js,ts}")
+    const glob = new Bun.Glob("{tool,tools}/*.{js,ts}")
 
     for (const dir of await Config.directories()) {
-      for await (const match of glob.scan({ cwd: dir, absolute: true, followSymlinks: true, dot: true })) {
+      for await (const match of glob.scan({
+        cwd: dir,
+        absolute: true,
+        followSymlinks: true,
+        dot: true,
+      })) {
         const namespace = path.basename(match, path.extname(match))
         const mod = await import(match)
         for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
@@ -47,15 +63,21 @@ export namespace ToolRegistry {
   function fromPlugin(id: string, def: ToolDefinition): Tool.Info {
     return {
       id,
-      init: async () => ({
+      init: async (initCtx) => ({
         parameters: z.object(def.args),
         description: def.description,
         execute: async (args, ctx) => {
-          const result = await def.execute(args as any, ctx)
+          const pluginCtx = {
+            ...ctx,
+            directory: Instance.directory,
+            worktree: Instance.worktree,
+          } as unknown as PluginToolContext
+          const result = await def.execute(args as any, pluginCtx)
+          const out = await Truncate.output(result, {}, initCtx?.agent)
           return {
             title: "",
-            output: result,
-            metadata: {},
+            output: out.truncated ? out.content : result,
+            metadata: { truncated: out.truncated, outputPath: out.truncated ? out.outputPath : undefined },
           }
         },
       }),
@@ -74,20 +96,28 @@ export namespace ToolRegistry {
 
   async function all(): Promise<Tool.Info[]> {
     const custom = await state().then((x) => x.custom)
+    const config = await Config.get()
+
     return [
       InvalidTool,
+      ...(["app", "cli", "desktop"].includes(Flag.OPENCODE_CLIENT) ? [QuestionTool] : []),
       BashTool,
-      EditTool,
-      WebFetchTool,
+      ReadTool,
       GlobTool,
       GrepTool,
-      ListTool,
-      PatchTool,
-      ReadTool,
+      EditTool,
       WriteTool,
+      TaskTool,
+      WebFetchTool,
       TodoWriteTool,
       TodoReadTool,
-      TaskTool,
+      WebSearchTool,
+      CodeSearchTool,
+      SkillTool,
+      ApplyPatchTool,
+      ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
+      ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
+      ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),
       ...custom,
     ]
   }
@@ -96,37 +126,40 @@ export namespace ToolRegistry {
     return all().then((x) => x.map((t) => t.id))
   }
 
-  export async function tools(_providerID: string, _modelID: string) {
+  export async function tools(
+    model: {
+      providerID: string
+      modelID: string
+    },
+    agent?: Agent.Info,
+  ) {
     const tools = await all()
     const result = await Promise.all(
-      tools.map(async (t) => ({
-        id: t.id,
-        ...(await t.init()),
-      })),
+      tools
+        .filter((t) => {
+          // Enable websearch/codesearch for zen/kilo users OR via enable flag
+          // kilocode_change start
+          if (t.id === "codesearch" || t.id === "websearch") {
+            return model.providerID === "opencode" || model.providerID === "kilo" || Flag.OPENCODE_ENABLE_EXA
+          }
+          // kilocode_change end
+
+          // use apply tool in same format as codex
+          const usePatch =
+            model.modelID.includes("gpt-") && !model.modelID.includes("oss") && !model.modelID.includes("gpt-4")
+          if (t.id === "apply_patch") return usePatch
+          if (t.id === "edit" || t.id === "write") return !usePatch
+
+          return true
+        })
+        .map(async (t) => {
+          using _ = log.time(t.id)
+          return {
+            id: t.id,
+            ...(await t.init({ agent })),
+          }
+        }),
     )
-    return result
-  }
-
-  export async function enabled(
-    _providerID: string,
-    _modelID: string,
-    agent: Agent.Info,
-  ): Promise<Record<string, boolean>> {
-    const result: Record<string, boolean> = {}
-    result["patch"] = false
-
-    if (agent.permission.edit === "deny") {
-      result["edit"] = false
-      result["patch"] = false
-      result["write"] = false
-    }
-    if (agent.permission.bash["*"] === "deny" && Object.keys(agent.permission.bash).length === 1) {
-      result["bash"] = false
-    }
-    if (agent.permission.webfetch === "deny") {
-      result["webfetch"] = false
-    }
-
     return result
   }
 }

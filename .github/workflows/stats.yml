@@ -5,9 +5,14 @@ on:
     - cron: "0 12 * * *" # Run daily at 12:00 UTC
   workflow_dispatch: # Allow manual trigger
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   stats:
-    runs-on: ubuntu-latest
+    # kilocode_change start - disabled for kilo-cli fork (OpenCode stats tracking)
+    if: false
+    # kilocode_change end - original: if: github.repository == 'Kilo-Org/kilo'
+    runs-on: depot-ubuntu-24.04-4
     permissions:
       contents: write
 
