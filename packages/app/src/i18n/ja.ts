@@ -28,6 +28,8 @@ export const dict = {
   "command.settings.open": "設定を開く",
   "command.session.previous": "前のセッション",
   "command.session.next": "次のセッション",
+  "command.session.previous.unseen": "Previous unread session",
+  "command.session.next.unseen": "Next unread session",
   "command.session.archive": "セッションをアーカイブ",
 
   "command.palette": "コマンドパレット",
@@ -42,7 +44,6 @@ export const dict = {
 
   "command.session.new": "新しいセッション",
   "command.file.open": "ファイルを開く",
-  "command.file.open.description": "ファイルとコマンドを検索",
   "command.context.addSelection": "選択範囲をコンテキストに追加",
   "command.context.addSelection.description": "現在のファイルから選択した行を追加",
   "command.terminal.toggle": "ターミナルの切り替え",
@@ -68,6 +69,7 @@ export const dict = {
   "command.model.variant.cycle.description": "次の思考レベルに切り替え",
   "command.permissions.autoaccept.enable": "編集を自動承認",
   "command.permissions.autoaccept.disable": "編集の自動承認を停止",
+  "command.workspace.toggle": "ワークスペースを切り替え",
   "command.session.undo": "元に戻す",
   "command.session.undo.description": "最後のメッセージを元に戻す",
   "command.session.redo": "やり直す",
@@ -81,7 +83,7 @@ export const dict = {
   "command.session.unshare": "セッションの共有を停止",
   "command.session.unshare.description": "このセッションの共有を停止",
 
-  "palette.search.placeholder": "ファイルとコマンドを検索",
+  "palette.search.placeholder": "ファイル、コマンド、セッションを検索",
   "palette.empty": "結果が見つかりません",
   "palette.group.commands": "コマンド",
   "palette.group.files": "ファイル",
@@ -89,10 +91,8 @@ export const dict = {
   "dialog.provider.search.placeholder": "プロバイダーを検索",
   "dialog.provider.empty": "プロバイダーが見つかりません",
   "dialog.provider.group.popular": "人気",
-  "dialog.provider.group.recommended": "推奨", // kilocode_change
   "dialog.provider.group.other": "その他",
   "dialog.provider.tag.recommended": "推奨",
-  "dialog.provider.kilo.note": "500以上のAIモデルにアクセス",
   "dialog.provider.anthropic.note": "Claude Pro/MaxまたはAPIキーで接続",
   "dialog.provider.openai.note": "ChatGPT Pro/PlusまたはAPIキーで接続",
   "dialog.provider.copilot.note": "CopilotまたはAPIキーで接続",
@@ -103,7 +103,7 @@ export const dict = {
   "dialog.model.manage": "モデルを管理",
   "dialog.model.manage.description": "モデルセレクターに表示するモデルをカスタマイズします。",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo CLIが提供する無料モデル",
+  "dialog.model.unpaid.freeModels.title": "Kiloが提供する無料モデル",
   "dialog.model.unpaid.addMore.title": "人気のプロバイダーからモデルを追加",
 
   "dialog.provider.viewAll": "さらにプロバイダーを表示",
@@ -116,20 +116,20 @@ export const dict = {
   "provider.connect.status.waiting": "認証を待機中...",
   "provider.connect.status.failed": "認証に失敗しました: {{error}}",
   "provider.connect.apiKey.description":
-    "{{provider}}のAPIキーを入力してアカウントを接続し、Kilo CLIで{{provider}}モデルを使用します。",
+    "{{provider}}のAPIキーを入力してアカウントを接続し、Kiloで{{provider}}モデルを使用します。",
   "provider.connect.apiKey.label": "{{provider}} APIキー",
   "provider.connect.apiKey.placeholder": "APIキー",
   "provider.connect.apiKey.required": "APIキーが必要です",
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gatewayは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
-  "provider.connect.kiloGateway.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
-  "provider.connect.kiloGateway.visit.prefix": " ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " にアクセスしてAPIキーを取得してください。",
+  "provider.connect.opencodeZen.line1":
+    "OpenCode Zenは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
+  "provider.connect.opencodeZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
+  "provider.connect.opencodeZen.visit.prefix": " ",
+  "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
+  "provider.connect.opencodeZen.visit.suffix": " にアクセスしてAPIキーを取得してください。",
   "provider.connect.oauth.code.visit.prefix": " ",
   "provider.connect.oauth.code.visit.link": "このリンク",
   "provider.connect.oauth.code.visit.suffix":
-    " にアクセスして認証コードを取得し、アカウントを接続してKilo CLIで{{provider}}モデルを使用してください。",
+    " にアクセスして認証コードを取得し、アカウントを接続してKiloで{{provider}}モデルを使用してください。",
   "provider.connect.oauth.code.label": "{{method}} 認証コード",
   "provider.connect.oauth.code.placeholder": "認証コード",
   "provider.connect.oauth.code.required": "認証コードが必要です",
@@ -137,7 +137,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": " ",
   "provider.connect.oauth.auto.visit.link": "このリンク",
   "provider.connect.oauth.auto.visit.suffix":
-    " にアクセスし、以下のコードを入力してアカウントを接続し、Kilo CLIで{{provider}}モデルを使用してください。",
+    " にアクセスし、以下のコードを入力してアカウントを接続し、Kiloで{{provider}}モデルを使用してください。",
   "provider.connect.oauth.auto.confirmationCode": "確認コード",
   "provider.connect.toast.connected.title": "{{provider}}が接続されました",
   "provider.connect.toast.connected.description": "{{provider}}モデルが使用可能になりました。",
@@ -211,6 +211,8 @@ export const dict = {
   "prompt.popover.emptyCommands": "一致するコマンドがありません",
   "prompt.dropzone.label": "画像またはPDFをここにドロップ",
   "prompt.slash.badge.custom": "カスタム",
+  "prompt.slash.badge.skill": "スキル",
+  "prompt.slash.badge.mcp": "mcp",
   "prompt.context.active": "アクティブ",
   "prompt.context.includeActiveFile": "アクティブなファイルを含める",
   "prompt.context.removeActiveFile": "コンテキストからアクティブなファイルを削除",
@@ -248,7 +250,7 @@ export const dict = {
   "dialog.directory.empty": "フォルダが見つかりません",
 
   "dialog.server.title": "サーバー",
-  "dialog.server.description": "このアプリが接続するKilo CLIサーバーを切り替えます。",
+  "dialog.server.description": "このアプリが接続するKiloサーバーを切り替えます。",
   "dialog.server.search.placeholder": "サーバーを検索",
   "dialog.server.empty": "サーバーはまだありません",
   "dialog.server.add.title": "サーバーを追加",
@@ -368,7 +370,7 @@ export const dict = {
   "toast.session.listFailed.title": "{{project}}のセッション読み込みに失敗しました",
 
   "toast.update.title": "アップデートが利用可能です",
-  "toast.update.description": "Kilo CLIの新しいバージョン ({{version}}) がインストール可能です。",
+  "toast.update.description": "Kiloの新しいバージョン ({{version}}) がインストール可能です。",
   "toast.update.action.installRestart": "インストールして再起動",
   "toast.update.action.notYet": "今はしない",
 
@@ -379,7 +381,7 @@ export const dict = {
   "error.page.action.checking": "確認中...",
   "error.page.action.checkUpdates": "アップデートを確認",
   "error.page.action.updateTo": "{{version}}にアップデート",
-  "error.page.report.prefix": "このエラーをKilo CLIチームに報告してください: ",
+  "error.page.report.prefix": "このエラーをKiloチームに報告してください: ",
   "error.page.report.discord": "Discord",
   "error.page.version": "バージョン: {{version}}",
 
@@ -397,7 +399,7 @@ export const dict = {
   "error.chain.didYouMean": "もしかして: {{suggestions}}",
   "error.chain.modelNotFound": "モデルが見つかりません: {{provider}}/{{model}}",
   "error.chain.checkConfig": "config (opencode.json) のプロバイダー/モデル名を確認してください",
-  "error.chain.mcpFailed": 'MCPサーバー "{{name}}" が失敗しました。注意: Kilo CLIはまだMCP認証をサポートしていません。',
+  "error.chain.mcpFailed": 'MCPサーバー "{{name}}" が失敗しました。注意: KiloはまだMCP認証をサポートしていません。',
   "error.chain.providerAuthFailed": "プロバイダー認証に失敗しました ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'プロバイダー "{{provider}}" の初期化に失敗しました。認証情報と設定を確認してください。',
@@ -435,6 +437,7 @@ export const dict = {
   "session.review.noChanges": "変更なし",
   "session.files.selectToOpen": "開くファイルを選択",
   "session.files.all": "すべてのファイル",
+  "session.files.binaryContent": "バイナリファイル（内容を表示できません）",
   "session.messages.renderEarlier": "以前のメッセージを表示",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
   "session.messages.loadEarlier": "以前のメッセージを読み込む",
@@ -506,12 +509,12 @@ export const dict = {
   "sidebar.workspaces.enable": "ワークスペースを有効化",
   "sidebar.workspaces.disable": "ワークスペースを無効化",
   "sidebar.gettingStarted.title": "はじめに",
-  "sidebar.gettingStarted.line1": "Kilo CLIには無料モデルが含まれているため、すぐに開始できます。",
+  "sidebar.gettingStarted.line1": "Kiloには無料モデルが含まれているため、すぐに開始できます。",
   "sidebar.gettingStarted.line2": "プロバイダーを接続して、Claude、GPT、Geminiなどのモデルを使用できます。",
   "sidebar.project.recentSessions": "最近のセッション",
   "sidebar.project.viewAllSessions": "すべてのセッションを表示",
 
-  "app.name.desktop": "OpenCode Desktop",
+  "app.name.desktop": "Kilo Desktop",
   "settings.section.desktop": "デスクトップ",
   "settings.section.server": "サーバー",
   "settings.tab.general": "一般",
@@ -523,11 +526,11 @@ export const dict = {
   "settings.general.section.sounds": "効果音",
 
   "settings.general.row.language.title": "言語",
-  "settings.general.row.language.description": "Kilo CLIの表示言語を変更します",
+  "settings.general.row.language.description": "Kiloの表示言語を変更します",
   "settings.general.row.appearance.title": "外観",
-  "settings.general.row.appearance.description": "デバイスでのKilo CLIの表示をカスタマイズします",
+  "settings.general.row.appearance.description": "デバイスでのKiloの表示をカスタマイズします",
   "settings.general.row.theme.title": "テーマ",
-  "settings.general.row.theme.description": "Kilo CLIのテーマをカスタマイズします。",
+  "settings.general.row.theme.description": "Kiloのテーマをカスタマイズします。",
   "settings.general.row.font.title": "フォント",
   "settings.general.row.font.description": "コードブロックで使用する等幅フォントをカスタマイズします",
 
@@ -535,13 +538,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "アップデート後に「新機能」ポップアップを表示",
 
   "settings.updates.row.startup.title": "起動時にアップデートを確認",
-  "settings.updates.row.startup.description": "OpenCode の起動時に自動でアップデートを確認します",
+  "settings.updates.row.startup.description": "Kilo の起動時に自動でアップデートを確認します",
   "settings.updates.row.check.title": "アップデートを確認",
   "settings.updates.row.check.description": "手動でアップデートを確認し、利用可能ならインストールします",
   "settings.updates.action.checkNow": "今すぐ確認",
   "settings.updates.action.checking": "確認中...",
   "settings.updates.toast.latest.title": "最新です",
-  "settings.updates.toast.latest.description": "OpenCode は最新バージョンです。",
+  "settings.updates.toast.latest.description": "Kilo は最新バージョンです。",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",

@@ -1,4 +1,4 @@
-import { createOpencodeClient, type Event } from "@kilocode/sdk/v2" // kilocode_change
+import { createOpencodeClient, type Event } from "@kilocode/sdk/v2"
 import { createSimpleContext } from "./helper"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { batch, onCleanup, onMount } from "solid-js"
@@ -9,13 +9,20 @@ export type EventSource = {
 
 export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
   name: "SDK",
-  init: (props: { url: string; directory?: string; fetch?: typeof fetch; events?: EventSource }) => {
+  init: (props: {
+    url: string
+    directory?: string
+    fetch?: typeof fetch
+    headers?: RequestInit["headers"]
+    events?: EventSource
+  }) => {
     const abort = new AbortController()
     const sdk = createOpencodeClient({
       baseUrl: props.url,
       signal: abort.signal,
       directory: props.directory,
       fetch: props.fetch,
+      headers: props.headers,
     })
 
     const emitter = createGlobalEmitter<{

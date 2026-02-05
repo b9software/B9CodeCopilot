@@ -1,4 +1,5 @@
 import { test, expect } from "bun:test"
+import path from "path"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Agent } from "../../src/agent/agent"
@@ -483,7 +484,7 @@ test("legacy tools config maps write/edit/patch/multiedit to edit permission", a
   })
 })
 
-test("Truncate.DIR is allowed even when user denies external_directory globally", async () => {
+test("Truncate.GLOB is allowed even when user denies external_directory globally", async () => {
   const { Truncate } = await import("../../src/tool/truncation")
   await using tmp = await tmpdir({
     config: {
@@ -496,16 +497,16 @@ test("Truncate.DIR is allowed even when user denies external_directory globally"
     directory: tmp.path,
     fn: async () => {
       // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", code!.permission).action).toBe("deny")
+      const build = await Agent.get("code")
       // kilocode_change end
+      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
+      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
     },
   })
 })
 
-test("Truncate.DIR is allowed even when user denies external_directory per-agent", async () => {
+test("Truncate.GLOB is allowed even when user denies external_directory per-agent", async () => {
   const { Truncate } = await import("../../src/tool/truncation")
   await using tmp = await tmpdir({
     config: {
@@ -524,23 +525,23 @@ test("Truncate.DIR is allowed even when user denies external_directory per-agent
     directory: tmp.path,
     fn: async () => {
       // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, code!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", code!.permission).action).toBe("deny")
+      const build = await Agent.get("code")
       // kilocode_change end
+      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
+      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
     },
   })
 })
 
-test("explicit Truncate.DIR deny is respected", async () => {
+test("explicit Truncate.GLOB deny is respected", async () => {
   const { Truncate } = await import("../../src/tool/truncation")
   await using tmp = await tmpdir({
     config: {
       permission: {
         external_directory: {
           "*": "deny",
-          [Truncate.DIR]: "deny",
+          [Truncate.GLOB]: "deny",
         },
       },
     },
@@ -549,17 +550,51 @@ test("explicit Truncate.DIR deny is respected", async () => {
     directory: tmp.path,
     fn: async () => {
       // kilocode_change start - renamed from "build" to "code"
-      const code = await Agent.get("code")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, code!.permission).action).toBe("deny")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, code!.permission).action).toBe("deny")
+      const build = await Agent.get("code")
       // kilocode_change end
+      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("deny")
+      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
     },
   })
 })
 
-// kilocode_change start - renamed from "build" to "code"
-test("defaultAgent returns code when no default_agent config", async () => {
-  // kilocode_change end
+test("skill directories are allowed for external_directory", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      const skillDir = path.join(dir, ".opencode", "skill", "perm-skill")
+      await Bun.write(
+        path.join(skillDir, "SKILL.md"),
+        `---
+name: perm-skill
+description: Permission skill.
+---
+
+# Permission Skill
+`,
+      )
+    },
+  })
+
+  const home = process.env.OPENCODE_TEST_HOME
+  process.env.OPENCODE_TEST_HOME = tmp.path
+
+  try {
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const build = await Agent.get("build")
+        const skillDir = path.join(tmp.path, ".opencode", "skill", "perm-skill")
+        const target = path.join(skillDir, "reference", "notes.md")
+        expect(PermissionNext.evaluate("external_directory", target, build!.permission).action).toBe("allow")
+      },
+    })
+  } finally {
+    process.env.OPENCODE_TEST_HOME = home
+  }
+})
+
+test("defaultAgent returns build when no default_agent config", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,

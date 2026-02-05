@@ -3,7 +3,7 @@ import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { ProgressCircle } from "@opencode-ai/ui/progress-circle"
 import { Button } from "@opencode-ai/ui/button"
 import { useParams } from "@solidjs/router"
-import { AssistantMessage } from "@kilocode/sdk/v2/client" // kilocode_change
+import { AssistantMessage } from "@kilocode/sdk/v2/client"
 import { findLast } from "@opencode-ai/util/array"
 
 import { useLayout } from "@/context/layout"
@@ -64,7 +64,7 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
   }
 
   const circle = () => (
-    <div class="p-1">
+    <div class="flex items-center justify-center">
       <ProgressCircle size={16} strokeWidth={2} percentage={context()?.percentage ?? 0} />
     </div>
   )

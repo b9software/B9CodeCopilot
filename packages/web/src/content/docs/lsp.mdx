@@ -1,15 +1,15 @@
 ---
 title: LSP Servers
-description: Kilo CLI integrates with your LSP servers.
+description: Kilo integrates with your LSP servers.
 ---
 
-Kilo CLI integrates with your Language Server Protocol (LSP) to help the LLM interact with your codebase. It uses diagnostics to provide feedback to the LLM.
+Kilo integrates with your Language Server Protocol (LSP) to help the LLM interact with your codebase. It uses diagnostics to provide feedback to the LLM.
 
 ---
 
 ## Built-in
 
-Kilo CLI comes with several built-in LSP servers for popular languages:
+Kilo comes with several built-in LSP servers for popular languages:
 
 | LSP Server         | Extensions                                                          | Requirements                                                 |
 | ------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -25,6 +25,7 @@ Kilo CLI comes with several built-in LSP servers for popular languages:
 | fsharp             | .fs, .fsi, .fsx, .fsscript                                          | `.NET SDK` installed                                         |
 | gleam              | .gleam                                                              | `gleam` command available                                    |
 | gopls              | .go                                                                 | `go` command available                                       |
+| hls                | .hs, .lhs                                                           | `haskell-language-server-wrapper` command available          |
 | jdtls              | .java                                                               | `Java SDK (version 21+)` installed                           |
 | kotlin-ls          | .kt, .kts                                                           | Auto-installs for Kotlin projects                            |
 | lua-ls             | .lua                                                                | Auto-installs for Lua projects                               |
@@ -68,7 +69,7 @@ You can customize LSP servers through the `lsp` section in your Kilo CLI config.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://kilo.ai/config.json",
   "lsp": {}
 }
 ```
@@ -87,13 +88,57 @@ Let's look at some examples.
 
 ---
 
+### Environment variables
+
+Use the `env` property to set environment variables when starting the LSP server:
+
+```json title="opencode.json" {5-7}
+{
+  "$schema": "https://kilo.ai/config.json",
+  "lsp": {
+    "rust": {
+      "env": {
+        "RUST_LOG": "debug"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Initialization options
+
+Use the `initialization` property to pass initialization options to the LSP server. These are server-specific settings sent during the LSP `initialize` request:
+
+```json title="opencode.json" {5-9}
+{
+  "$schema": "https://kilo.ai/config.json",
+  "lsp": {
+    "typescript": {
+      "initialization": {
+        "preferences": {
+          "importModuleSpecifierPreference": "relative"
+        }
+      }
+    }
+  }
+}
+```
+
+:::note
+Initialization options vary by LSP server. Check your LSP server's documentation for available options.
+:::
+
+---
+
 ### Disabling LSP servers
 
 To disable **all** LSP servers globally, set `lsp` to `false`:
 
 ```json title="opencode.json" {3}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://kilo.ai/config.json",
   "lsp": false
 }
 ```
@@ -102,7 +147,7 @@ To disable a **specific** LSP server, set `disabled` to `true`:
 
 ```json title="opencode.json" {5}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://kilo.ai/config.json",
   "lsp": {
     "typescript": {
       "disabled": true
@@ -119,7 +164,7 @@ You can add custom LSP servers by specifying the command and file extensions:
 
 ```json title="opencode.json" {4-7}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://kilo.ai/config.json",
   "lsp": {
     "custom-lsp": {
       "command": ["custom-lsp-server", "--stdio"],

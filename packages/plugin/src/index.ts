@@ -1,4 +1,3 @@
-// kilocode_change start
 import type {
   Event,
   createOpencodeClient,
@@ -12,7 +11,6 @@ import type {
   Auth,
   Config,
 } from "@kilocode/sdk"
-// kilocode_change end
 
 import type { BunShell } from "./shell.js"
 import { type ToolDefinition } from "./tool.js"
@@ -187,6 +185,7 @@ export interface Hooks {
     input: { tool: string; sessionID: string; callID: string },
     output: { args: any },
   ) => Promise<void>
+  "shell.env"?: (input: { cwd: string }, output: { env: Record<string, string> }) => Promise<void>
   "tool.execute.after"?: (
     input: { tool: string; sessionID: string; callID: string },
     output: {

@@ -8,12 +8,12 @@ import { DialogPrompt } from "../ui/dialog-prompt"
 import { Link } from "../ui/link"
 import { useTheme } from "../context/theme"
 import { TextAttributes } from "@opentui/core"
-import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2" // kilocode_change
+import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
 import { DialogModel } from "./dialog-model"
 import { useKeyboard } from "@opentui/solid"
 import { Clipboard } from "@tui/util/clipboard"
 import { useToast } from "../ui/toast"
-import { KiloAutoMethod } from "@kilocode/kilo-gateway/tui" // kilocode_change
+import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method" // kilocode_change
 
 const PROVIDER_PRIORITY: Record<string, number> = {
   kilo: -1, // kilocode_change - Kilo Gateway at top

@@ -6,6 +6,8 @@ import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 import { MCP } from "../mcp"
+import { Skill } from "../skill"
+import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
 
 export namespace Command {
   export const Event = {
@@ -26,7 +28,7 @@ export namespace Command {
       description: z.string().optional(),
       agent: z.string().optional(),
       model: z.string().optional(),
-      mcp: z.boolean().optional(),
+      source: z.enum(["command", "mcp", "skill"]).optional(),
       // workaround for zod not supporting async functions natively so we use getters
       // https://zod.dev/v4/changelog?id=zfunction
       template: z.promise(z.string()).or(z.string()),
@@ -53,6 +55,10 @@ export namespace Command {
   export const Default = {
     INIT: "init",
     REVIEW: "review",
+    // kilocode_change start
+    LOCAL_REVIEW: "local-review",
+    LOCAL_REVIEW_UNCOMMITTED: "local-review-uncommitted",
+    // kilocode_change end
   } as const
 
   const state = Instance.state(async () => {
@@ -62,20 +68,25 @@ export namespace Command {
       [Default.INIT]: {
         name: Default.INIT,
         description: "create/update AGENTS.md",
+        source: "command",
         get template() {
           return PROMPT_INITIALIZE.replace("${path}", Instance.worktree)
         },
         hints: hints(PROMPT_INITIALIZE),
       },
-      [Default.REVIEW]: {
-        name: Default.REVIEW,
-        description: "review changes [commit|branch|pr], defaults to uncommitted",
-        get template() {
-          return PROMPT_REVIEW.replace("${path}", Instance.worktree)
-        },
-        subtask: true,
-        hints: hints(PROMPT_REVIEW),
-      },
+      // kilocode_change start
+      // [Default.REVIEW]: {
+      //   name: Default.REVIEW,
+      //   description: "review changes [commit|branch|pr], defaults to uncommitted",
+      //   get template() {
+      //     return PROMPT_REVIEW.replace("${path}", Instance.worktree)
+      //   },
+      //   subtask: true,
+      //   hints: hints(PROMPT_REVIEW),
+      // },
+      [Default.LOCAL_REVIEW]: localReviewCommand(),
+      [Default.LOCAL_REVIEW_UNCOMMITTED]: localReviewUncommittedCommand(),
+      // kilocode_change end
     }
 
     for (const [name, command] of Object.entries(cfg.command ?? {})) {
@@ -84,6 +95,7 @@ export namespace Command {
         agent: command.agent,
         model: command.model,
         description: command.description,
+        source: "command",
         get template() {
           return command.template
         },
@@ -94,7 +106,7 @@ export namespace Command {
     for (const [name, prompt] of Object.entries(await MCP.prompts())) {
       result[name] = {
         name,
-        mcp: true,
+        source: "mcp",
         description: prompt.description,
         get template() {
           // since a getter can't be async we need to manually return a promise here
@@ -115,6 +127,21 @@ export namespace Command {
           })
         },
         hints: prompt.arguments?.map((_, i) => `$${i + 1}`) ?? [],
+      }
+    }
+
+    // Add skills as invokable commands
+    for (const skill of await Skill.all()) {
+      // Skip if a command with this name already exists
+      if (result[skill.name]) continue
+      result[skill.name] = {
+        name: skill.name,
+        description: skill.description,
+        source: "skill",
+        get template() {
+          return skill.content
+        },
+        hints: [],
       }
     }
 

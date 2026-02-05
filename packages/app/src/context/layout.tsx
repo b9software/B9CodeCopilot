@@ -4,7 +4,7 @@ import { createSimpleContext } from "@opencode-ai/ui/context"
 import { useGlobalSync } from "./global-sync"
 import { useGlobalSDK } from "./global-sdk"
 import { useServer } from "./server"
-import { Project } from "@kilocode/sdk/v2" // kilocode_change
+import { Project } from "@kilocode/sdk/v2"
 import { Persist, persisted, removePersisted } from "@/utils/persist"
 import { same } from "@/utils/same"
 import { createScrollPersistence, type SessionScroll } from "./layout-scroll"
@@ -682,12 +682,15 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             if (!current) return
 
             const all = current.all.filter((x) => x !== tab)
+            if (current.active !== tab) {
+              setStore("sessionTabs", session, "all", all)
+              return
+            }
+
+            const index = current.all.findIndex((f) => f === tab)
+            const next = current.all[index - 1] ?? current.all[index + 1] ?? all[0]
             batch(() => {
               setStore("sessionTabs", session, "all", all)
-              if (current.active !== tab) return
-
-              const index = current.all.findIndex((f) => f === tab)
-              const next = all[index - 1] ?? all[0]
               setStore("sessionTabs", session, "active", next)
             })
           },

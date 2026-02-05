@@ -28,6 +28,8 @@ export const dict = {
   "command.settings.open": "Открыть настройки",
   "command.session.previous": "Предыдущая сессия",
   "command.session.next": "Следующая сессия",
+  "command.session.previous.unseen": "Previous unread session",
+  "command.session.next.unseen": "Next unread session",
   "command.session.archive": "Архивировать сессию",
 
   "command.palette": "Палитра команд",
@@ -42,7 +44,6 @@ export const dict = {
 
   "command.session.new": "Новая сессия",
   "command.file.open": "Открыть файл",
-  "command.file.open.description": "Поиск файлов и команд",
   "command.context.addSelection": "Добавить выделение в контекст",
   "command.context.addSelection.description": "Добавить выбранные строки из текущего файла",
   "command.terminal.toggle": "Переключить терминал",
@@ -68,6 +69,7 @@ export const dict = {
   "command.model.variant.cycle.description": "Переключиться к следующему уровню усилий",
   "command.permissions.autoaccept.enable": "Авто-принятие изменений",
   "command.permissions.autoaccept.disable": "Прекратить авто-принятие изменений",
+  "command.workspace.toggle": "Переключить рабочие пространства",
   "command.session.undo": "Отменить",
   "command.session.undo.description": "Отменить последнее сообщение",
   "command.session.redo": "Повторить",
@@ -81,7 +83,7 @@ export const dict = {
   "command.session.unshare": "Отменить публикацию",
   "command.session.unshare.description": "Прекратить публикацию сессии",
 
-  "palette.search.placeholder": "Поиск файлов и команд",
+  "palette.search.placeholder": "Поиск файлов, команд и сессий",
   "palette.empty": "Ничего не найдено",
   "palette.group.commands": "Команды",
   "palette.group.files": "Файлы",
@@ -89,10 +91,8 @@ export const dict = {
   "dialog.provider.search.placeholder": "Поиск провайдеров",
   "dialog.provider.empty": "Провайдеры не найдены",
   "dialog.provider.group.popular": "Популярные",
-  "dialog.provider.group.recommended": "Рекомендуемые", // kilocode_change
   "dialog.provider.group.other": "Другие",
   "dialog.provider.tag.recommended": "Рекомендуемые",
-  "dialog.provider.kilo.note": "Доступ к более чем 500 моделям ИИ",
   "dialog.provider.anthropic.note": "Подключитесь с помощью Claude Pro/Max или API ключа",
   "dialog.provider.openai.note": "Подключитесь с помощью ChatGPT Pro/Plus или API ключа",
   "dialog.provider.copilot.note": "Подключитесь с помощью Copilot или API ключа",
@@ -103,7 +103,7 @@ export const dict = {
   "dialog.model.manage": "Управление моделями",
   "dialog.model.manage.description": "Настройте какие модели появляются в выборе модели",
 
-  "dialog.model.unpaid.freeModels.title": "Бесплатные модели от Kilo CLI",
+  "dialog.model.unpaid.freeModels.title": "Бесплатные модели от Kilo",
   "dialog.model.unpaid.addMore.title": "Добавьте больше моделей от популярных провайдеров",
 
   "dialog.provider.viewAll": "Показать больше провайдеров",
@@ -116,21 +116,21 @@ export const dict = {
   "provider.connect.status.waiting": "Ожидание авторизации...",
   "provider.connect.status.failed": "Ошибка авторизации: {{error}}",
   "provider.connect.apiKey.description":
-    "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Kilo CLI.",
+    "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Kilo.",
   "provider.connect.apiKey.label": "{{provider}} API ключ",
   "provider.connect.apiKey.placeholder": "API ключ",
   "provider.connect.apiKey.required": "API ключ обязателен",
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway даёт вам доступ к отобранным надёжным оптимизированным моделям для агентов программирования.",
-  "provider.connect.kiloGateway.line2":
+  "provider.connect.opencodeZen.line1":
+    "OpenCode Zen даёт вам доступ к отобранным надёжным оптимизированным моделям для агентов программирования.",
+  "provider.connect.opencodeZen.line2":
     "С одним API ключом вы получите доступ к таким моделям как Claude, GPT, Gemini, GLM и другим.",
-  "provider.connect.kiloGateway.visit.prefix": "Посетите ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " чтобы получить ваш API ключ.",
+  "provider.connect.opencodeZen.visit.prefix": "Посетите ",
+  "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
+  "provider.connect.opencodeZen.visit.suffix": " чтобы получить ваш API ключ.",
   "provider.connect.oauth.code.visit.prefix": "Посетите ",
   "provider.connect.oauth.code.visit.link": "эту ссылку",
   "provider.connect.oauth.code.visit.suffix":
-    " чтобы получить код авторизации для подключения аккаунта и использования моделей {{provider}} в Kilo CLI.",
+    " чтобы получить код авторизации для подключения аккаунта и использования моделей {{provider}} в Kilo.",
   "provider.connect.oauth.code.label": "{{method}} код авторизации",
   "provider.connect.oauth.code.placeholder": "Код авторизации",
   "provider.connect.oauth.code.required": "Код авторизации обязателен",
@@ -138,7 +138,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Посетите ",
   "provider.connect.oauth.auto.visit.link": "эту ссылку",
   "provider.connect.oauth.auto.visit.suffix":
-    " и введите код ниже для подключения аккаунта и использования моделей {{provider}} в Kilo CLI.",
+    " и введите код ниже для подключения аккаунта и использования моделей {{provider}} в Kilo.",
   "provider.connect.oauth.auto.confirmationCode": "Код подтверждения",
   "provider.connect.toast.connected.title": "{{provider}} подключён",
   "provider.connect.toast.connected.description": "Модели {{provider}} теперь доступны.",
@@ -212,6 +212,8 @@ export const dict = {
   "prompt.popover.emptyCommands": "Нет совпадающих команд",
   "prompt.dropzone.label": "Перетащите изображения или PDF сюда",
   "prompt.slash.badge.custom": "своё",
+  "prompt.slash.badge.skill": "навык",
+  "prompt.slash.badge.mcp": "mcp",
   "prompt.context.active": "активно",
   "prompt.context.includeActiveFile": "Включить активный файл",
   "prompt.context.removeActiveFile": "Удалить активный файл из контекста",
@@ -249,7 +251,7 @@ export const dict = {
   "dialog.directory.empty": "Папки не найдены",
 
   "dialog.server.title": "Серверы",
-  "dialog.server.description": "Переключите сервер Kilo CLI к которому подключается приложение.",
+  "dialog.server.description": "Переключите сервер Kilo к которому подключается приложение.",
   "dialog.server.search.placeholder": "Поиск серверов",
   "dialog.server.empty": "Серверов пока нет",
   "dialog.server.add.title": "Добавить сервер",
@@ -348,6 +350,11 @@ export const dict = {
   "toast.permissions.autoaccept.off.title": "Авто-принятие остановлено",
   "toast.permissions.autoaccept.off.description": "Редактирование и запись потребуют подтверждения",
 
+  "toast.workspace.enabled.title": "Рабочие пространства включены",
+  "toast.workspace.enabled.description": "В боковой панели теперь отображаются несколько рабочих деревьев",
+  "toast.workspace.disabled.title": "Рабочие пространства отключены",
+  "toast.workspace.disabled.description": "В боковой панели отображается только главное рабочее дерево",
+
   "toast.model.none.title": "Модель не выбрана",
   "toast.model.none.description": "Подключите провайдера для суммаризации сессии",
 
@@ -370,7 +377,7 @@ export const dict = {
   "toast.session.listFailed.title": "Не удалось загрузить сессии для {{project}}",
 
   "toast.update.title": "Доступно обновление",
-  "toast.update.description": "Новая версия Kilo CLI ({{version}}) доступна для установки.",
+  "toast.update.description": "Новая версия Kilo ({{version}}) доступна для установки.",
   "toast.update.action.installRestart": "Установить и перезапустить",
   "toast.update.action.notYet": "Пока нет",
 
@@ -381,7 +388,7 @@ export const dict = {
   "error.page.action.checking": "Проверка...",
   "error.page.action.checkUpdates": "Проверить обновления",
   "error.page.action.updateTo": "Обновить до {{version}}",
-  "error.page.report.prefix": "Пожалуйста, сообщите об этой ошибке команде Kilo CLI",
+  "error.page.report.prefix": "Пожалуйста, сообщите об этой ошибке команде Kilo",
   "error.page.report.discord": "в Discord",
   "error.page.version": "Версия: {{version}}",
 
@@ -400,7 +407,7 @@ export const dict = {
   "error.chain.modelNotFound": "Модель не найдена: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Проверьте названия провайдера/модели в конфиге (opencode.json)",
   "error.chain.mcpFailed":
-    'MCP сервер "{{name}}" завершился с ошибкой. Обратите внимание, что Kilo CLI пока не поддерживает MCP авторизацию.',
+    'MCP сервер "{{name}}" завершился с ошибкой. Обратите внимание, что Kilo пока не поддерживает MCP авторизацию.',
   "error.chain.providerAuthFailed": "Ошибка аутентификации провайдера ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Не удалось инициализировать провайдера "{{provider}}". Проверьте учётные данные и конфигурацию.',
@@ -439,6 +446,7 @@ export const dict = {
   "session.review.noChanges": "Нет изменений",
   "session.files.selectToOpen": "Выберите файл, чтобы открыть",
   "session.files.all": "Все файлы",
+  "session.files.binaryContent": "Двоичный файл (содержимое не может быть отображено)",
   "session.messages.renderEarlier": "Показать предыдущие сообщения",
   "session.messages.loadingEarlier": "Загрузка предыдущих сообщений...",
   "session.messages.loadEarlier": "Загрузить предыдущие сообщения",
@@ -510,13 +518,13 @@ export const dict = {
   "sidebar.workspaces.enable": "Включить рабочие пространства",
   "sidebar.workspaces.disable": "Отключить рабочие пространства",
   "sidebar.gettingStarted.title": "Начало работы",
-  "sidebar.gettingStarted.line1": "Kilo CLI включает бесплатные модели, чтобы вы могли начать сразу.",
+  "sidebar.gettingStarted.line1": "Kilo включает бесплатные модели, чтобы вы могли начать сразу.",
   "sidebar.gettingStarted.line2":
     "Подключите любого провайдера для использования моделей, включая Claude, GPT, Gemini и др.",
   "sidebar.project.recentSessions": "Недавние сессии",
   "sidebar.project.viewAllSessions": "Посмотреть все сессии",
 
-  "app.name.desktop": "OpenCode Desktop",
+  "app.name.desktop": "Kilo Desktop",
   "settings.section.desktop": "Приложение",
   "settings.section.server": "Сервер",
   "settings.tab.general": "Основные",
@@ -528,11 +536,11 @@ export const dict = {
   "settings.general.section.sounds": "Звуковые эффекты",
 
   "settings.general.row.language.title": "Язык",
-  "settings.general.row.language.description": "Изменить язык отображения Kilo CLI",
+  "settings.general.row.language.description": "Изменить язык отображения Kilo",
   "settings.general.row.appearance.title": "Внешний вид",
-  "settings.general.row.appearance.description": "Настройте как Kilo CLI выглядит на вашем устройстве",
+  "settings.general.row.appearance.description": "Настройте как Kilo выглядит на вашем устройстве",
   "settings.general.row.theme.title": "Тема",
-  "settings.general.row.theme.description": "Настройте оформление Kilo CLI.",
+  "settings.general.row.theme.description": "Настройте оформление Kilo.",
   "settings.general.row.font.title": "Шрифт",
   "settings.general.row.font.description": "Настройте моноширинный шрифт для блоков кода",
 
@@ -540,13 +548,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Показывать всплывающие окна "Что нового" после обновлений',
 
   "settings.updates.row.startup.title": "Проверять обновления при запуске",
-  "settings.updates.row.startup.description": "Автоматически проверять обновления при запуске OpenCode",
+  "settings.updates.row.startup.description": "Автоматически проверять обновления при запуске Kilo",
   "settings.updates.row.check.title": "Проверить обновления",
   "settings.updates.row.check.description": "Проверить обновления вручную и установить, если доступны",
   "settings.updates.action.checkNow": "Проверить сейчас",
   "settings.updates.action.checking": "Проверка...",
   "settings.updates.toast.latest.title": "У вас последняя версия",
-  "settings.updates.toast.latest.description": "Вы используете последнюю версию OpenCode.",
+  "settings.updates.toast.latest.description": "Вы используете последнюю версию Kilo.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",

@@ -28,6 +28,8 @@ export const dict = {
   "command.settings.open": "Åbn indstillinger",
   "command.session.previous": "Forrige session",
   "command.session.next": "Næste session",
+  "command.session.previous.unseen": "Previous unread session",
+  "command.session.next.unseen": "Next unread session",
   "command.session.archive": "Arkivér session",
 
   "command.palette": "Kommandopalette",
@@ -42,7 +44,6 @@ export const dict = {
 
   "command.session.new": "Ny session",
   "command.file.open": "Åbn fil",
-  "command.file.open.description": "Søg i filer og kommandoer",
   "command.context.addSelection": "Tilføj markering til kontekst",
   "command.context.addSelection.description": "Tilføj markerede linjer fra den aktuelle fil",
   "command.terminal.toggle": "Skift terminal",
@@ -68,6 +69,7 @@ export const dict = {
   "command.model.variant.cycle.description": "Skift til næste indsatsniveau",
   "command.permissions.autoaccept.enable": "Accepter ændringer automatisk",
   "command.permissions.autoaccept.disable": "Stop automatisk accept af ændringer",
+  "command.workspace.toggle": "Skift arbejdsområder",
   "command.session.undo": "Fortryd",
   "command.session.undo.description": "Fortryd den sidste besked",
   "command.session.redo": "Omgør",
@@ -81,7 +83,7 @@ export const dict = {
   "command.session.unshare": "Stop deling af session",
   "command.session.unshare.description": "Stop med at dele denne session",
 
-  "palette.search.placeholder": "Søg i filer og kommandoer",
+  "palette.search.placeholder": "Søg i filer, kommandoer og sessioner",
   "palette.empty": "Ingen resultater fundet",
   "palette.group.commands": "Kommandoer",
   "palette.group.files": "Filer",
@@ -89,10 +91,8 @@ export const dict = {
   "dialog.provider.search.placeholder": "Søg udbydere",
   "dialog.provider.empty": "Ingen udbydere fundet",
   "dialog.provider.group.popular": "Populære",
-  "dialog.provider.group.recommended": "Anbefalet", // kilocode_change
   "dialog.provider.group.other": "Andre",
   "dialog.provider.tag.recommended": "Anbefalet",
-  "dialog.provider.kilo.note": "Adgang til 500+ AI-modeller",
   "dialog.provider.anthropic.note": "Forbind med Claude Pro/Max eller API-nøgle",
   "dialog.provider.openai.note": "Forbind med ChatGPT Pro/Plus eller API-nøgle",
   "dialog.provider.copilot.note": "Forbind med Copilot eller API-nøgle",
@@ -103,7 +103,7 @@ export const dict = {
   "dialog.model.manage": "Administrer modeller",
   "dialog.model.manage.description": "Tilpas hvilke modeller der vises i modelvælgeren.",
 
-  "dialog.model.unpaid.freeModels.title": "Gratis modeller leveret af Kilo CLI",
+  "dialog.model.unpaid.freeModels.title": "Gratis modeller leveret af Kilo",
   "dialog.model.unpaid.addMore.title": "Tilføj flere modeller fra populære udbydere",
 
   "dialog.provider.viewAll": "Vis flere udbydere",
@@ -116,21 +116,21 @@ export const dict = {
   "provider.connect.status.waiting": "Venter på godkendelse...",
   "provider.connect.status.failed": "Godkendelse mislykkedes: {{error}}",
   "provider.connect.apiKey.description":
-    "Indtast din {{provider}} API-nøgle for at forbinde din konto og bruge {{provider}} modeller i Kilo CLI.",
+    "Indtast din {{provider}} API-nøgle for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
   "provider.connect.apiKey.label": "{{provider}} API-nøgle",
   "provider.connect.apiKey.placeholder": "API-nøgle",
   "provider.connect.apiKey.required": "API-nøgle er påkrævet",
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway giver dig adgang til et udvalg af pålidelige optimerede modeller til kodningsagenter.",
-  "provider.connect.kiloGateway.line2":
+  "provider.connect.opencodeZen.line1":
+    "OpenCode Zen giver dig adgang til et udvalg af pålidelige optimerede modeller til kodningsagenter.",
+  "provider.connect.opencodeZen.line2":
     "Med en enkelt API-nøgle får du adgang til modeller som Claude, GPT, Gemini, GLM og flere.",
-  "provider.connect.kiloGateway.visit.prefix": "Besøg ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " for at hente din API-nøgle.",
+  "provider.connect.opencodeZen.visit.prefix": "Besøg ",
+  "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
+  "provider.connect.opencodeZen.visit.suffix": " for at hente din API-nøgle.",
   "provider.connect.oauth.code.visit.prefix": "Besøg ",
   "provider.connect.oauth.code.visit.link": "dette link",
   "provider.connect.oauth.code.visit.suffix":
-    " for at hente din godkendelseskode for at forbinde din konto og bruge {{provider}} modeller i Kilo CLI.",
+    " for at hente din godkendelseskode for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
   "provider.connect.oauth.code.label": "{{method}} godkendelseskode",
   "provider.connect.oauth.code.placeholder": "Godkendelseskode",
   "provider.connect.oauth.code.required": "Godkendelseskode er påkrævet",
@@ -138,7 +138,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Besøg ",
   "provider.connect.oauth.auto.visit.link": "dette link",
   "provider.connect.oauth.auto.visit.suffix":
-    " og indtast koden nedenfor for at forbinde din konto og bruge {{provider}} modeller i Kilo CLI.",
+    " og indtast koden nedenfor for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
   "provider.connect.oauth.auto.confirmationCode": "Bekræftelseskode",
   "provider.connect.toast.connected.title": "{{provider}} forbundet",
   "provider.connect.toast.connected.description": "{{provider}} modeller er nu tilgængelige.",
@@ -212,6 +212,8 @@ export const dict = {
   "prompt.popover.emptyCommands": "Ingen matchende kommandoer",
   "prompt.dropzone.label": "Slip billeder eller PDF'er her",
   "prompt.slash.badge.custom": "brugerdefineret",
+  "prompt.slash.badge.skill": "skill",
+  "prompt.slash.badge.mcp": "mcp",
   "prompt.context.active": "aktiv",
   "prompt.context.includeActiveFile": "Inkluder aktiv fil",
   "prompt.context.removeActiveFile": "Fjern aktiv fil fra kontekst",
@@ -249,7 +251,7 @@ export const dict = {
   "dialog.directory.empty": "Ingen mapper fundet",
 
   "dialog.server.title": "Servere",
-  "dialog.server.description": "Skift hvilken Kilo CLI-server denne app forbinder til.",
+  "dialog.server.description": "Skift hvilken Kilo-server denne app forbinder til.",
   "dialog.server.search.placeholder": "Søg servere",
   "dialog.server.empty": "Ingen servere endnu",
   "dialog.server.add.title": "Tilføj en server",
@@ -347,6 +349,11 @@ export const dict = {
   "toast.permissions.autoaccept.off.title": "Stoppede automatisk accept af ændringer",
   "toast.permissions.autoaccept.off.description": "Redigerings- og skrivetilladelser vil kræve godkendelse",
 
+  "toast.workspace.enabled.title": "Arbejdsområder aktiveret",
+  "toast.workspace.enabled.description": "Flere worktrees vises nu i sidepanelet",
+  "toast.workspace.disabled.title": "Arbejdsområder deaktiveret",
+  "toast.workspace.disabled.description": "Kun hoved-worktree vises i sidepanelet",
+
   "toast.model.none.title": "Ingen model valgt",
   "toast.model.none.description": "Forbind en udbyder for at opsummere denne session",
 
@@ -369,7 +376,7 @@ export const dict = {
   "toast.session.listFailed.title": "Kunne ikke indlæse sessioner for {{project}}",
 
   "toast.update.title": "Opdatering tilgængelig",
-  "toast.update.description": "En ny version af Kilo CLI ({{version}}) er nu tilgængelig til installation.",
+  "toast.update.description": "En ny version af Kilo ({{version}}) er nu tilgængelig til installation.",
   "toast.update.action.installRestart": "Installer og genstart",
   "toast.update.action.notYet": "Ikke endnu",
 
@@ -380,7 +387,7 @@ export const dict = {
   "error.page.action.checking": "Tjekker...",
   "error.page.action.checkUpdates": "Tjek for opdateringer",
   "error.page.action.updateTo": "Opdater til {{version}}",
-  "error.page.report.prefix": "Rapporter venligst denne fejl til Kilo CLI-teamet",
+  "error.page.report.prefix": "Rapporter venligst denne fejl til Kilo-teamet",
   "error.page.report.discord": "på Discord",
   "error.page.version": "Version: {{version}}",
 
@@ -398,7 +405,7 @@ export const dict = {
   "error.chain.didYouMean": "Mente du: {{suggestions}}",
   "error.chain.modelNotFound": "Model ikke fundet: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Tjek dine konfigurations (opencode.json) udbyder/modelnavne",
-  "error.chain.mcpFailed": 'MCP-server "{{name}}" fejlede. Bemærk, Kilo CLI understøtter ikke MCP-godkendelse endnu.',
+  "error.chain.mcpFailed": 'MCP-server "{{name}}" fejlede. Bemærk, Kilo understøtter ikke MCP-godkendelse endnu.',
   "error.chain.providerAuthFailed": "Udbydergodkendelse mislykkedes ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Kunne ikke initialisere udbyder "{{provider}}". Tjek legitimationsoplysninger og konfiguration.',
@@ -436,6 +443,7 @@ export const dict = {
   "session.review.noChanges": "Ingen ændringer",
   "session.files.selectToOpen": "Vælg en fil at åbne",
   "session.files.all": "Alle filer",
+  "session.files.binaryContent": "Binær fil (indhold kan ikke vises)",
   "session.messages.renderEarlier": "Vis tidligere beskeder",
   "session.messages.loadingEarlier": "Indlæser tidligere beskeder...",
   "session.messages.loadEarlier": "Indlæs tidligere beskeder",
@@ -506,12 +514,12 @@ export const dict = {
   "sidebar.workspaces.enable": "Aktiver arbejdsområder",
   "sidebar.workspaces.disable": "Deaktiver arbejdsområder",
   "sidebar.gettingStarted.title": "Kom i gang",
-  "sidebar.gettingStarted.line1": "Kilo CLI inkluderer gratis modeller så du kan starte med det samme.",
+  "sidebar.gettingStarted.line1": "Kilo inkluderer gratis modeller så du kan starte med det samme.",
   "sidebar.gettingStarted.line2": "Forbind enhver udbyder for at bruge modeller, inkl. Claude, GPT, Gemini osv.",
   "sidebar.project.recentSessions": "Seneste sessioner",
   "sidebar.project.viewAllSessions": "Vis alle sessioner",
 
-  "app.name.desktop": "OpenCode Desktop",
+  "app.name.desktop": "Kilo Desktop",
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
   "settings.tab.general": "Generelt",
@@ -523,11 +531,11 @@ export const dict = {
   "settings.general.section.sounds": "Lydeffekter",
 
   "settings.general.row.language.title": "Sprog",
-  "settings.general.row.language.description": "Ændr visningssproget for Kilo CLI",
+  "settings.general.row.language.description": "Ændr visningssproget for Kilo",
   "settings.general.row.appearance.title": "Udseende",
-  "settings.general.row.appearance.description": "Tilpas hvordan Kilo CLI ser ud på din enhed",
+  "settings.general.row.appearance.description": "Tilpas hvordan Kilo ser ud på din enhed",
   "settings.general.row.theme.title": "Tema",
-  "settings.general.row.theme.description": "Tilpas hvordan Kilo CLI er temabestemt.",
+  "settings.general.row.theme.description": "Tilpas hvordan Kilo er temabestemt.",
   "settings.general.row.font.title": "Skrifttype",
   "settings.general.row.font.description": "Tilpas mono-skrifttypen brugt i kodeblokke",
 
@@ -535,13 +543,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Vis "Hvad er nyt"-popups efter opdateringer',
 
   "settings.updates.row.startup.title": "Tjek for opdateringer ved opstart",
-  "settings.updates.row.startup.description": "Tjek automatisk for opdateringer, når OpenCode starter",
+  "settings.updates.row.startup.description": "Tjek automatisk for opdateringer, når Kilo starter",
   "settings.updates.row.check.title": "Tjek for opdateringer",
   "settings.updates.row.check.description": "Tjek manuelt for opdateringer og installer, hvis tilgængelig",
   "settings.updates.action.checkNow": "Tjek nu",
   "settings.updates.action.checking": "Tjekker...",
   "settings.updates.toast.latest.title": "Du er opdateret",
-  "settings.updates.toast.latest.description": "Du kører den nyeste version af OpenCode.",
+  "settings.updates.toast.latest.description": "Du kører den nyeste version af Kilo.",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",

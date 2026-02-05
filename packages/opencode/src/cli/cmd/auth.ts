@@ -10,7 +10,7 @@ import { Config } from "../../config/config"
 import { Global } from "../../global"
 import { Plugin } from "../../plugin"
 import { Instance } from "../../project/instance"
-import type { Hooks } from "@kilocode/plugin" // kilocode_change
+import type { Hooks } from "@kilocode/plugin"
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
@@ -311,7 +311,7 @@ export const AuthLoginCommand = cmd({
 
         if (prompts.isCancel(provider)) throw new UI.CancelledError()
 
-        const plugin = await Plugin.list().then((x) => x.find((x) => x.auth?.provider === provider))
+        const plugin = await Plugin.list().then((x) => x.findLast((x) => x.auth?.provider === provider))
         if (plugin && plugin.auth) {
           const handled = await handlePluginAuth({ auth: plugin.auth }, provider)
           if (handled) return
@@ -327,7 +327,7 @@ export const AuthLoginCommand = cmd({
           if (prompts.isCancel(provider)) throw new UI.CancelledError()
 
           // Check if a plugin provides auth for this custom provider
-          const customPlugin = await Plugin.list().then((x) => x.find((x) => x.auth?.provider === provider))
+          const customPlugin = await Plugin.list().then((x) => x.findLast((x) => x.auth?.provider === provider))
           if (customPlugin && customPlugin.auth) {
             const handled = await handlePluginAuth({ auth: customPlugin.auth }, provider)
             if (handled) return
@@ -382,23 +382,30 @@ export const AuthLogoutCommand = cmd({
   command: "logout",
   describe: "log out from a configured provider",
   async handler() {
-    UI.empty()
-    const credentials = await Auth.all().then((x) => Object.entries(x))
-    prompts.intro("Remove credential")
-    if (credentials.length === 0) {
-      prompts.log.error("No credentials found")
-      return
-    }
-    const database = await ModelsDev.get()
-    const providerID = await prompts.select({
-      message: "Select provider",
-      options: credentials.map(([key, value]) => ({
-        label: (database[key]?.name || key) + UI.Style.TEXT_DIM + " (" + value.type + ")",
-        value: key,
-      })),
+    // kilocode_change start - wrap with Instance.provide for ModelsDev.get() -> Config.get() dependency
+    await Instance.provide({
+      directory: process.cwd(),
+      async fn() {
+        UI.empty()
+        const credentials = await Auth.all().then((x) => Object.entries(x))
+        prompts.intro("Remove credential")
+        if (credentials.length === 0) {
+          prompts.log.error("No credentials found")
+          return
+        }
+        const database = await ModelsDev.get()
+        const providerID = await prompts.select({
+          message: "Select provider",
+          options: credentials.map(([key, value]) => ({
+            label: (database[key]?.name || key) + UI.Style.TEXT_DIM + " (" + value.type + ")",
+            value: key,
+          })),
+        })
+        if (prompts.isCancel(providerID)) throw new UI.CancelledError()
+        await Auth.remove(providerID)
+        prompts.outro("Logout successful")
+      },
     })
-    if (prompts.isCancel(providerID)) throw new UI.CancelledError()
-    await Auth.remove(providerID)
-    prompts.outro("Logout successful")
+    // kilocode_change end
   },
 })

@@ -33,10 +33,14 @@
               pkg-config
               openssl
               git
+              gh
+              playwright-driver.browsers
               kilo
             ];
             shellHook = ''
               export KILO_ROOT="$PWD"
+              export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+              export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
             '';
           };
       });
@@ -53,43 +57,15 @@
           desktop = pkgs.callPackage ./nix/desktop.nix {
             inherit kilo;
           };
-          # nixpkgs cpu naming to bun cpu naming
-          cpuMap = {
-            x86_64 = "x64";
-            aarch64 = "arm64";
-          };
-          # matrix of node_modules builds - these will always fail due to fakeHash usage
-          # but allow computation of the correct hash from any build machine for any cpu/os
-          # see the update-nix-hashes workflow for usage
-          moduleUpdaters = pkgs.lib.listToAttrs (
-            pkgs.lib.concatMap
-              (
-                cpu:
-                map
-                  (os: {
-                    name = "${cpu}-${os}_node_modules";
-                    value = node_modules.override {
-                      bunCpu = cpuMap.${cpu};
-                      bunOs = os;
-                      hash = pkgs.lib.fakeHash;
-                    };
-                  })
-                  [
-                    "linux"
-                    "darwin"
-                  ]
-              )
-              [
-                "x86_64"
-                "aarch64"
-              ]
-          );
         in
         {
           default = kilo;
           inherit kilo desktop;
+          # Updater derivation with fakeHash - build fails and reveals correct hash
+          node_modules_updater = node_modules.override {
+            hash = pkgs.lib.fakeHash;
+          };
         }
-        // moduleUpdaters
       );
     };
 }
