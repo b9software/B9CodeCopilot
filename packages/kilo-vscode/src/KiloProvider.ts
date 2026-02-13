@@ -1,5 +1,7 @@
 import * as vscode from "vscode"
 import { type HttpClient, type SessionInfo, type SSEEvent, type KiloConnectionService } from "./services/cli-backend"
+import { handleChatCompletionRequest } from "./services/autocomplete/chat-autocomplete/handleChatCompletionRequest"
+import { handleChatCompletionAccepted } from "./services/autocomplete/chat-autocomplete/handleChatCompletionAccepted"
 
 export class KiloProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "kilo-code.new.sidebarView"
@@ -13,6 +15,8 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   private cachedProvidersMessage: unknown = null
   /** Cached agentsLoaded payload so requestAgents can be served before httpClient is ready */
   private cachedAgentsMessage: unknown = null
+  /** Cached configLoaded payload so requestConfig can be served before httpClient is ready */
+  private cachedConfigMessage: unknown = null
 
   private trackedSessionIds: Set<string> = new Set()
   private unsubscribeEvent: (() => void) | null = null
@@ -186,6 +190,11 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         case "logout":
           await this.handleLogout()
           break
+        case "setOrganization":
+          if (typeof message.organizationId === "string" || message.organizationId === null) {
+            await this.handleSetOrganization(message.organizationId)
+          }
+          break
         case "refreshProfile":
           await this.handleRefreshProfile()
           break
@@ -203,10 +212,49 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         case "requestAgents":
           await this.fetchAndSendAgents()
           break
+        case "questionReply":
+          await this.handleQuestionReply(message.requestID, message.answers)
+          break
+        case "questionReject":
+          await this.handleQuestionReject(message.requestID)
+          break
+        case "requestConfig":
+          await this.fetchAndSendConfig()
+          break
+        case "updateConfig":
+          await this.handleUpdateConfig(message.config)
+          break
         case "setLanguage":
           await vscode.workspace
             .getConfiguration("kilo-code.new")
             .update("language", message.locale || undefined, vscode.ConfigurationTarget.Global)
+          break
+        case "requestAutocompleteSettings":
+          this.sendAutocompleteSettings()
+          break
+        case "updateAutocompleteSetting": {
+          const allowedKeys = new Set([
+            "enableAutoTrigger",
+            "enableSmartInlineTaskKeybinding",
+            "enableChatAutocomplete",
+          ])
+          if (allowedKeys.has(message.key)) {
+            await vscode.workspace
+              .getConfiguration("kilo-code.new.autocomplete")
+              .update(message.key, message.value, vscode.ConfigurationTarget.Global)
+            this.sendAutocompleteSettings()
+          }
+          break
+        }
+        case "requestChatCompletion":
+          void handleChatCompletionRequest(
+            { type: "requestChatCompletion", text: message.text, requestId: message.requestId },
+            { postMessage: (msg) => this.postMessage(msg) },
+            this.connectionService,
+          )
+          break
+        case "chatCompletionAccepted":
+          handleChatCompletionAccepted({ type: "chatCompletionAccepted", suggestionLength: message.suggestionLength })
           break
         case "deleteSession":
           await this.handleDeleteSession(message.sessionID)
@@ -219,6 +267,9 @@ export class KiloProvider implements vscode.WebviewViewProvider {
           break
         case "requestBrowserSettings":
           this.sendBrowserSettings()
+          break
+        case "requestNotificationSettings":
+          this.sendNotificationSettings()
           break
       }
     })
@@ -301,6 +352,8 @@ export class KiloProvider implements vscode.WebviewViewProvider {
       // Fetch providers and agents, then send to webview
       await this.fetchAndSendProviders()
       await this.fetchAndSendAgents()
+      await this.fetchAndSendConfig()
+      this.sendNotificationSettings()
 
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
     } catch (error) {
@@ -583,6 +636,80 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Fetch backend config and send to webview.
+   */
+  private async fetchAndSendConfig(): Promise<void> {
+    if (!this.httpClient) {
+      if (this.cachedConfigMessage) {
+        this.postMessage(this.cachedConfigMessage)
+      }
+      return
+    }
+
+    try {
+      const workspaceDir = this.getWorkspaceDirectory()
+      const config = await this.httpClient.getConfig(workspaceDir)
+
+      const message = {
+        type: "configLoaded",
+        config,
+      }
+      this.cachedConfigMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch config:", error)
+    }
+  }
+
+  /**
+   * Read notification/sound settings from VS Code config and push to webview.
+   */
+  private sendNotificationSettings(): void {
+    const notifications = vscode.workspace.getConfiguration("kilo-code.new.notifications")
+    const sounds = vscode.workspace.getConfiguration("kilo-code.new.sounds")
+    this.postMessage({
+      type: "notificationSettingsLoaded",
+      settings: {
+        notifyAgent: notifications.get<boolean>("agent", true),
+        notifyPermissions: notifications.get<boolean>("permissions", true),
+        notifyErrors: notifications.get<boolean>("errors", true),
+        soundAgent: sounds.get<string>("agent", "default"),
+        soundPermissions: sounds.get<string>("permissions", "default"),
+        soundErrors: sounds.get<string>("errors", "default"),
+      },
+    })
+  }
+
+  /**
+   * Handle config update request from the webview.
+   * Applies a partial config update via the global config endpoint, then pushes
+   * the full merged config back to the webview.
+   */
+  private async handleUpdateConfig(partial: Record<string, unknown>): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      return
+    }
+
+    try {
+      const updated = await this.httpClient.updateConfig(partial)
+
+      const message = {
+        type: "configUpdated",
+        config: updated,
+      }
+      this.cachedConfigMessage = { type: "configLoaded", config: updated }
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to update config:", error)
+      this.postMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to update config",
+      })
+    }
+  }
+
+  /**
    * Handle sending a message from the webview.
    */
   private async handleSendMessage(
@@ -721,6 +848,40 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Handle question reply from the webview.
+   */
+  private async handleQuestionReply(requestID: string, answers: string[][]): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({ type: "questionError", requestID })
+      return
+    }
+
+    try {
+      await this.httpClient.replyToQuestion(requestID, answers, this.getWorkspaceDirectory())
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to reply to question:", error)
+      this.postMessage({ type: "questionError", requestID })
+    }
+  }
+
+  /**
+   * Handle question reject (dismiss) from the webview.
+   */
+  private async handleQuestionReject(requestID: string): Promise<void> {
+    if (!this.httpClient) {
+      this.postMessage({ type: "questionError", requestID })
+      return
+    }
+
+    try {
+      await this.httpClient.rejectQuestion(requestID, this.getWorkspaceDirectory())
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to reject question:", error)
+      this.postMessage({ type: "questionError", requestID })
+    }
+  }
+
+  /**
    * Handle login request from the webview.
    * Uses the provider OAuth flow: authorize → open browser → callback (polls until complete).
    * Sends device auth messages so the webview can display a QR code, verification code, and timer.
@@ -770,6 +931,11 @@ export class KiloProvider implements vscode.WebviewViewProvider {
       const profileData = await this.httpClient.getProfile()
       this.postMessage({ type: "profileData", data: profileData })
       this.postMessage({ type: "deviceAuthComplete" })
+
+      // Step 5: If user has organizations, navigate to profile view so they can pick one
+      if (profileData?.profile.organizations && profileData.profile.organizations.length > 0) {
+        this.postMessage({ type: "navigate", view: "profile" })
+      }
     } catch (error) {
       if (attempt !== this.loginAttempt) {
         return
@@ -778,6 +944,41 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         type: "deviceAuthFailed",
         error: error instanceof Error ? error.message : "Login failed",
       })
+    }
+  }
+
+  /**
+   * Handle organization switch request from the webview.
+   * Persists the selection and refreshes profile + providers since both change with org context.
+   */
+  private async handleSetOrganization(organizationId: string | null): Promise<void> {
+    const client = this.httpClient
+    if (!client) {
+      return
+    }
+
+    console.log("[Kilo New] KiloProvider: Switching organization:", organizationId ?? "personal")
+    try {
+      await client.setOrganization(organizationId)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to switch organization:", error)
+      // Re-fetch current profile to reset webview state (clears switching indicator)
+      const profileData = await client.getProfile()
+      this.postMessage({ type: "profileData", data: profileData })
+      return
+    }
+
+    // Org switch succeeded — refresh profile and providers independently (best-effort)
+    try {
+      const profileData = await client.getProfile()
+      this.postMessage({ type: "profileData", data: profileData })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to refresh profile after org switch:", error)
+    }
+    try {
+      await this.fetchAndSendProviders()
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to refresh providers after org switch:", error)
     }
   }
 
@@ -933,6 +1134,32 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         })
         break
 
+      case "question.asked":
+        this.postMessage({
+          type: "questionRequest",
+          question: {
+            id: event.properties.id,
+            sessionID: event.properties.sessionID,
+            questions: event.properties.questions,
+            tool: event.properties.tool,
+          },
+        })
+        break
+
+      case "question.replied":
+        this.postMessage({
+          type: "questionResolved",
+          requestID: event.properties.requestID,
+        })
+        break
+
+      case "question.rejected":
+        this.postMessage({
+          type: "questionResolved",
+          requestID: event.properties.requestID,
+        })
+        break
+
       case "session.created":
         // Store session if we don't have one yet
         if (!this.currentSession) {
@@ -957,6 +1184,21 @@ export class KiloProvider implements vscode.WebviewViewProvider {
         })
         break
     }
+  }
+
+  /**
+   * Read autocomplete settings from VS Code configuration and push to the webview.
+   */
+  private sendAutocompleteSettings(): void {
+    const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
+    this.postMessage({
+      type: "autocompleteSettingsLoaded",
+      settings: {
+        enableAutoTrigger: config.get<boolean>("enableAutoTrigger", true),
+        enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
+        enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
+      },
+    })
   }
 
   /**
@@ -995,6 +1237,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
   private _getHtmlForWebview(webview: vscode.Webview): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js"))
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css"))
+    const iconsBaseUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons"))
 
     const nonce = getNonce()
 
@@ -1045,6 +1288,7 @@ export class KiloProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
 	<div id="root"></div>
+	<script nonce="${nonce}">window.ICONS_BASE_URI = "${iconsBaseUri}";</script>
 	<script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`
