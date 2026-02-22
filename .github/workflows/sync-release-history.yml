@@ -1,0 +1,37 @@
+name: Sync Release History
+
+on:
+    schedule:
+        - cron: "0 3 * * *" # 每天 UTC 03:00 运行
+    workflow_dispatch: # 允许手动触发
+
+permissions:
+    contents: write # 需要写权限以推送分支
+
+jobs:
+    sync:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v6
+              with:
+                  # 需要完整历史以执行 commit-tree；
+                  # GITHUB_TOKEN 用于认证推送
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Add org remote
+              run: |
+                  git remote add org https://github.com/Kilo-Org/kilocode.git
+
+            - name: Fetch existing release-history branch (if any)
+              run: |
+                  git fetch origin release-history:release-history 2>/dev/null || true
+
+            - name: Run sync script
+              run: |
+                  bash scripts/kilocode/build-release-history.sh
+
+            - name: Push release-history to origin
+              run: |
+                  git push origin release-history
