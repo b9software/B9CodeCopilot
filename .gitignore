@@ -9,6 +9,10 @@ mock/
 .DS_Store
 *.orig
 
+# ⬇️ b9_change
+pnpm-lock.yaml
+# ⬆️ b9_change
+
 # Builds
 bin/
 bin-unpacked/
