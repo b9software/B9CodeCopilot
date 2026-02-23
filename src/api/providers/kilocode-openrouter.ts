@@ -112,9 +112,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 		// 2. Detect context from wrapper properties
 		const wrapperProps = getKiloCodeWrapperProperties()
-		if (wrapperProps.kiloCodeWrapperJetbrains) {
-			return "jetbrains-extension"
-		}
+		// ⬅️ b9_change: removed kiloCodeWrapperJetbrains case
 		if (wrapperProps.kiloCodeWrapper === "agent-manager") {
 			return "agent-manager"
 		}
@@ -210,7 +208,8 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			Accept: "application/json",
 			"x-api-key": this.options.kilocodeToken ?? "",
 			Authorization: `Bearer ${this.options.kilocodeToken}`,
-			...this.customRequestOptions({ taskId: taskId ?? "autocomplete", mode: "code", feature: "autocomplete" })?.headers,
+			...this.customRequestOptions({ taskId: taskId ?? "autocomplete", mode: "code", feature: "autocomplete" })
+				?.headers,
 		}
 
 		// temperature: 0.2 is mentioned as a sane example in mistral's docs and is what continue uses.

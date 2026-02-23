@@ -2,14 +2,10 @@
 import * as vscode from "vscode"
 import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
 import { ClineProvider } from "../../core/webview/ClineProvider"
-import { registerAutocompleteJetbrainsBridge } from "./AutocompleteJetbrainsBridge"
 
 export const registerAutocompleteProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
 	const autocompleteManager = new AutocompleteServiceManager(context, cline)
 	context.subscriptions.push(autocompleteManager)
-
-	// Register JetBrains Bridge if applicable
-	registerAutocompleteJetbrainsBridge(context, cline, autocompleteManager)
 
 	// Register AutocompleteServiceManager Commands
 	context.subscriptions.push(

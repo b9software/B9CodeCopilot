@@ -63,7 +63,6 @@ If you're creating a completely new file that doesn't exist in Roo, add this com
 
 - if the filename or directory name contains kilocode no marking with comments is required
 - all the following folders are kilocode-specific and need no marking with comments:
-    - jetbrains/
     - cli/
     - src/services/autocomplete/
     - src/services/continuedev/

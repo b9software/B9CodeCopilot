@@ -3,21 +3,18 @@ import * as vscode from "vscode"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { t } from "../../i18n"
 
-import { CommitMessageRequest, CommitMessageResult } from "./types/core"
+import { CommitMessageRequest } from "./types/core"
 import { CommitMessageGenerator } from "./CommitMessageGenerator"
 import { VSCodeCommitMessageAdapter } from "./adapters/VSCodeCommitMessageAdapter"
-import { JetBrainsCommitMessageAdapter } from "./adapters/JetBrainsCommitMessageAdapter"
 import { VscGenerationRequest } from "./types"
-import { JetbrainsGenerationRequest } from "./types/jetbrains"
 
 /**
  * Orchestrates commit message generation by routing requests to appropriate adapters.
- * This class handles command registration and coordinates between VSCode and JetBrains adapters.
+ * This class handles command registration and coordinates between VSCode adapters.
  */
 export class CommitMessageProvider implements vscode.Disposable {
 	private generator: CommitMessageGenerator
 	private vscodeAdapter: VSCodeCommitMessageAdapter
-	private jetbrainsAdapter: JetBrainsCommitMessageAdapter
 
 	constructor(
 		private context: vscode.ExtensionContext,
@@ -27,7 +24,6 @@ export class CommitMessageProvider implements vscode.Disposable {
 
 		this.generator = new CommitMessageGenerator(providerSettingsManager)
 		this.vscodeAdapter = new VSCodeCommitMessageAdapter(this.generator)
-		this.jetbrainsAdapter = new JetBrainsCommitMessageAdapter(this.generator)
 	}
 
 	/**
@@ -39,12 +35,6 @@ export class CommitMessageProvider implements vscode.Disposable {
 		const disposables = [
 			vscode.commands.registerCommand("kilo-code.vsc.generateCommitMessage", (vsRequest?: VscGenerationRequest) =>
 				this.handleVSCodeCommand(vsRequest),
-			),
-			vscode.commands.registerCommand(
-				"kilo-code.jetbrains.generateCommitMessage",
-				(...args: JetbrainsGenerationRequest): Promise<CommitMessageResult> => {
-					return this.handleJetBrainsCommand(...args)
-				},
 			),
 		]
 		this.context.subscriptions.push(...disposables)
@@ -59,17 +49,6 @@ export class CommitMessageProvider implements vscode.Disposable {
 		}
 
 		await this.vscodeAdapter.generateCommitMessage(request)
-	}
-
-	/**
-	 * Handle JetBrains-specific command by creating request from provided args.
-	 */
-	private async handleJetBrainsCommand(...args: JetbrainsGenerationRequest): Promise<CommitMessageResult> {
-		// JetBrains sends args as a nested array: [[workspacePath, selectedFiles]]
-		const [workspacePath, selectedFiles] = args[0]
-		const request = { workspacePath, selectedFiles }
-
-		return this.jetbrainsAdapter.generateCommitMessage(request)
 	}
 
 	/**
@@ -94,6 +73,5 @@ export class CommitMessageProvider implements vscode.Disposable {
 	 */
 	public dispose(): void {
 		this.vscodeAdapter?.dispose()
-		this.jetbrainsAdapter?.dispose()
 	}
 }

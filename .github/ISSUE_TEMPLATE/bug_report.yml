@@ -15,7 +15,6 @@ body:
           description: Which plugin are you reporting this bug for?
           options:
               - VSCode Extension
-              - JetBrains Plugin
               - Kilo Code CLI
           default: 0
       validations:
