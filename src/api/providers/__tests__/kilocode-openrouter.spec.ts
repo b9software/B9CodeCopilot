@@ -236,7 +236,7 @@ describe("KilocodeOpenrouterHandler", () => {
 			expect(result?.headers?.[X_KILOCODE_FEATURE]).toBe("autocomplete")
 		})
 
-		it("defaults to vscode-extension when no feature override and not JetBrains/agent-manager", () => {
+		it("defaults to vscode-extension when no feature override and not agent-manager", () => {
 			const handler = new KilocodeOpenrouterHandler(mockOptions)
 			const result = handler.customRequestOptions({ taskId: "test-task-id" })
 

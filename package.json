@@ -27,12 +27,7 @@
 		"playwright": "turbo playwright",
 		"npm:publish:types": "pnpm --filter @roo-code/types npm:publish",
 		"link-workspace-packages": "tsx scripts/link-packages.ts",
-		"unlink-workspace-packages": "tsx scripts/link-packages.ts --unlink",
-		"jetbrains:bundle": "turbo jetbrains:bundle --force",
-		"jetbrains:run-bundle": "turbo jetbrains:run-bundle",
-		"jetbrains:build": "turbo jetbrains:build",
-		"jetbrains:run": "turbo jetbrains:run",
-		"jetbrains-host:build": "turbo jetbrains-host:build"
+		"unlink-workspace-packages": "tsx scripts/link-packages.ts --unlink"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",
@@ -76,6 +71,7 @@
 			"glob": ">=11.1.0",
 			"@types/react": "^18.3.23",
 			"@types/react-dom": "^18.3.5",
+			"csstype": "^3.2.3",
 			"qs": "^6.14.1",
 			"body-parser": "^2.2.2",
 			"preact": "^10.28.2",

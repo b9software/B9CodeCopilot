@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { JETBRAIN_PRODUCTS, KiloCodeWrapperProperties } from "../../shared/kilocode/wrapper"
+import { KiloCodeWrapperProperties } from "../../shared/kilocode/wrapper"
 import { TelemetrySetting } from "@roo-code/types"
 
 export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
@@ -9,18 +9,13 @@ export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
 	let kiloCodeWrapperTitle = null
 	let kiloCodeWrapperCode = null
 	let kiloCodeWrapperVersion = null
-	let kiloCodeWrapperJetbrains = false
 
 	if (kiloCodeWrapped) {
 		const wrapperMatch = appName.split("|")
 		kiloCodeWrapper = wrapperMatch[1].trim() || null
 		kiloCodeWrapperCode = wrapperMatch[2].trim() || null
 		kiloCodeWrapperVersion = wrapperMatch[3].trim() || null
-		kiloCodeWrapperJetbrains = kiloCodeWrapperCode !== "cli"
-		kiloCodeWrapperTitle =
-			kiloCodeWrapperCode === "cli"
-				? "Kilo Code CLI"
-				: JETBRAIN_PRODUCTS[kiloCodeWrapperCode as keyof typeof JETBRAIN_PRODUCTS]?.name || "JetBrains IDE"
+		kiloCodeWrapperTitle = kiloCodeWrapperCode === "cli" ? "Kilo Code CLI" : kiloCodeWrapperCode || "Wrapper"
 	}
 
 	return {
@@ -29,7 +24,6 @@ export const getKiloCodeWrapperProperties = (): KiloCodeWrapperProperties => {
 		kiloCodeWrapperTitle,
 		kiloCodeWrapperCode,
 		kiloCodeWrapperVersion,
-		kiloCodeWrapperJetbrains,
 	}
 }
 
